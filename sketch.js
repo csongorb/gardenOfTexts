@@ -1,8 +1,5 @@
 var myGarden;
 
-var logoWidth = 800;
-var logoHeight = 200;
-
 function setup() {
     createCanvas(windowWidth, windowHeight);
 
@@ -32,19 +29,14 @@ function keyPressed() {
     print(keyCode);
 
     // F
-    if (keyCode == 70) {
+    if (key === 'f' || key === 'F') {
         var fs = fullscreen();
         fullscreen(!fs);
     }
 }
 
 function windowResized() {
-    var fs = fullscreen();
-    if (fs) {
-        resizeCanvas(windowWidth, windowHeight);
-    } else {
-        resizeCanvas(logoWidth, logoHeight);
-    }
+    resizeCanvas(windowWidth, windowHeight);
 }
 
 // =================================
@@ -200,7 +192,7 @@ function Garden() {
     };
 
     this.plantTextWithCharPlants = function(text, xPos, yPos, maxCharSize) {
-        var splitString = split(text, '');
+        var splitString = text.split('');
         for (var i = 0; i < splitString.length; i++) {
             this.myPlants.push(new CharPlant(splitString[i], xPos + (i * maxCharSize / 2), yPos, maxCharSize));
         }
