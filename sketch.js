@@ -1,6 +1,8 @@
 var myGarden;
 
-var DEBUG = true;
+var mouseOverCanvas = true;
+
+var DEBUG = false;
 var growRadius = 100; // how far from the mouse plants get the hover growth boost
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
 
@@ -17,18 +19,27 @@ function setup() {
 
     myGarden = new Garden();
     myGarden.plant();
+
+    document.addEventListener('mouseleave', function () {
+        mouseOverCanvas = false;
+    });
+    document.addEventListener('mouseenter', function () {
+        mouseOverCanvas = true;
+    });
+}
+
+function drawWateringCircle() {
+    if (mouseOverCanvas) {
+        noStroke();
+        fill(5, 30, 95);
+        ellipseMode(CENTER);
+        ellipse(mouseX, mouseY, growRadius * 2, growRadius * 2 * PERSPECTIVE);
+    }
 }
 
 function draw() {
     background(20);
     strokeWeight(2);
-
-    if (DEBUG) {
-        noFill();
-        stroke(80, 180, 255, 150);
-        ellipseMode(CENTER);
-        ellipse(mouseX, mouseY, growRadius * 2, growRadius * 2 * PERSPECTIVE);
-    }
 
     myGarden.display();
 }
@@ -39,6 +50,11 @@ function mouseClicked() {
             myGarden.myPlants.splice(i, 1);
         }
     }
+}
+
+function mouseWheel(event) {
+    growRadius = constrain(growRadius - event.delta * 0.1, 30, 500);
+    return false; // prevent the page itself from scrolling
 }
 
 function keyPressed() {
@@ -142,12 +158,8 @@ class CharPlant {
         pop();
     }
 
-    displayGround() {
-        if (this.mouseOver(growRadius)) {
-            stroke(200);
-        } else {
-            noStroke();
-        }
+    displayGroundFill() {
+        noStroke();
         fill(80);
 
         ellipseMode(CENTER);
@@ -158,6 +170,22 @@ class CharPlant {
             stroke(255, 80, 80);
             strokeWeight(1);
             ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2 * PERSPECTIVE);
+        }
+    }
+
+    // drawn after the watering circle, so a plant's outline stays visible even where the watering circle covers it
+    displayGroundOutline() {
+        noFill();
+        ellipseMode(CENTER);
+
+        stroke(80); // same color as the ground fill
+        strokeWeight(1.5);
+        ellipse(this.x, this.y, this.maxSize / 2, (this.maxSize / 2) * PERSPECTIVE);
+
+        if (this.mouseOver()) {
+            stroke(255, 60, 60);
+            strokeWeight(2);
+            ellipse(this.x, this.y, this.maxSize / 2, (this.maxSize / 2) * PERSPECTIVE);
         }
     }
 
@@ -280,7 +308,11 @@ class Garden {
         });
         this.myPlants.sort(this.compare);
         for (var i = 0; i < myGarden.myPlants.length; i++) {
-            this.myPlants[i].displayGround();
+            this.myPlants[i].displayGroundFill();
+        }
+        drawWateringCircle();
+        for (var i = 0; i < myGarden.myPlants.length; i++) {
+            this.myPlants[i].displayGroundOutline();
         }
         for (var i = 0; i < myGarden.myPlants.length; i++) {
             this.myPlants[i].displayPlants();
