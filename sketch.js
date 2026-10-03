@@ -1,6 +1,7 @@
 var myGarden;
 
 var DEBUG = true;
+var growRadius = 100; // how far from the mouse plants get the hover growth boost
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -14,6 +15,13 @@ function setup() {
 function draw() {
     background(20);
     strokeWeight(2);
+
+    if (DEBUG) {
+        noFill();
+        stroke(80, 180, 255, 150);
+        ellipseMode(CENTER);
+        ellipse(mouseX, mouseY, growRadius * 2, growRadius * 2);
+    }
 
     myGarden.display();
 }
@@ -128,7 +136,7 @@ class CharPlant {
     }
 
     displayGround() {
-        if (this.mouseOver()) {
+        if (this.mouseOver(growRadius)) {
             stroke(200);
         } else {
             noStroke();
@@ -167,7 +175,7 @@ class CharPlant {
                 g = 0;
             }
 
-            if (this.mouseOver() || (DEBUG && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
+            if (this.mouseOver(growRadius) || (DEBUG && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
                 g = g * 20;
             }
 
@@ -218,10 +226,10 @@ class CharPlant {
         }
     }
 
-    mouseOver() {
+    mouseOver(radius) {
         var r = false;
         var d = dist(mouseX, mouseY, this.x, this.y);
-        if (d < 10) {
+        if (d < (radius || 10)) {
             r = true;
         }
         return r;
