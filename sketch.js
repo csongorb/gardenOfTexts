@@ -2,6 +2,13 @@ var myGarden;
 
 var DEBUG = true;
 var growRadius = 100; // how far from the mouse plants get the hover growth boost
+var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
+
+function ellipticalDist(x1, y1, x2, y2) {
+    var dx = x1 - x2;
+    var dy = (y1 - y2) / PERSPECTIVE;
+    return sqrt(dx * dx + dy * dy);
+}
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -20,7 +27,7 @@ function draw() {
         noFill();
         stroke(80, 180, 255, 150);
         ellipseMode(CENTER);
-        ellipse(mouseX, mouseY, growRadius * 2, growRadius * 2);
+        ellipse(mouseX, mouseY, growRadius * 2, growRadius * 2 * PERSPECTIVE);
     }
 
     myGarden.display();
@@ -144,13 +151,13 @@ class CharPlant {
         fill(80);
 
         ellipseMode(CENTER);
-        ellipse(this.x, this.y, this.maxSize / 2, this.maxSize / 4);
+        ellipse(this.x, this.y, this.maxSize / 2, (this.maxSize / 2) * PERSPECTIVE);
 
         if (DEBUG && this.mouseOver()) {
             noFill();
             stroke(255, 80, 80);
             strokeWeight(1);
-            ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2);
+            ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2 * PERSPECTIVE);
         }
     }
 
@@ -197,7 +204,7 @@ class CharPlant {
         var radius = random(0, maxRadius);
         return {
             x: this.x + radius * cos(angle),
-            y: this.y + radius * sin(angle)
+            y: this.y + radius * sin(angle) * PERSPECTIVE
         };
     }
 
@@ -228,7 +235,7 @@ class CharPlant {
 
     mouseOver(radius) {
         var r = false;
-        var d = dist(mouseX, mouseY, this.x, this.y);
+        var d = ellipticalDist(mouseX, mouseY, this.x, this.y);
         if (d < (radius || 10)) {
             r = true;
         }
@@ -301,7 +308,7 @@ class Garden {
         for (var i = 0; i < this.myPlants.length; i++) {
             var other = this.myPlants[i];
             var minDist = (radius + other.maxSize / 4) * overlapAllowance;
-            if (dist(x, y, other.x, other.y) < minDist) {
+            if (ellipticalDist(x, y, other.x, other.y) < minDist) {
                 return false;
             }
         }
