@@ -20,7 +20,7 @@ function mouseClicked() {
     for (var i = 0; i < myGarden.myPlants.length; i++) {
         if (myGarden.myPlants[i].mouseOver() && myGarden.myPlants[i].isMaturing) {
             myGarden.myPlants[i].reset();
-            myGarden.myPlants[i].plantNewPlants(0, 3, myGarden.myPlants[i].maxSize);
+            myGarden.myPlants[i].plantNewPlants(0, 3, myGarden.myPlants[i].spreadRange);
         }
     }
 }
@@ -84,6 +84,7 @@ function varyColor(baseColor, amount) {
 }
 
 class CharPlant {
+
     constructor(_char, _xPos, _yPos, _maxSize, _parentColor) {
         this.char = _char;
         this.x = _xPos;
@@ -91,10 +92,11 @@ class CharPlant {
         this.maxSize = _maxSize + random(-_maxSize / 12, _maxSize / 12);
         this.size = 1;
         this.tilt = random(-8, 8);
-        this.c = _parentColor ? varyColor(_parentColor, 30) : color(random(0, 255), random(0, 255), random(0, 255));
+        this.c = _parentColor ? varyColor(_parentColor, 40) : color(random(0, 255), random(0, 255), random(0, 255));
         this.fruitC = color(0, 220, 0);
         this.fruitW = 0.0;
         this.growthSpeed = 0.1; // per second
+        this.spreadRange = this.maxSize;
         this.startMaturingAt = 0.8;
         this.isGrown = false;
         this.isMaturing = false;
@@ -102,6 +104,7 @@ class CharPlant {
 
     preGrow() {
         this.size = random(this.maxSize / 2, this.maxSize);
+        this.spreadRange = this.maxSize * 1.2;
     }
 
     reset() {
@@ -179,14 +182,18 @@ class CharPlant {
 
         if (this.isGrown) {
             this.reset();
-            this.plantNewPlants(0, 2, this.maxSize / 2);
+            this.plantNewPlants(0, 2, this.spreadRange);
         }
     }
 
     plantNewPlants(min, max, range) {
         var newPlants = random(min, max);
         for (var i = 0; i < newPlants; i++) {
-            myGarden.myPlants.push(new CharPlant(this.char, this.x + random(-range, range), this.y + random(-range, range), this.maxSize, this.c));
+            var nx = this.x + random(-range, range);
+            var ny = this.y + random(-range, range);
+            if (myGarden.hasSpaceAt(nx, ny, this.maxSize / 4)) {
+                myGarden.myPlants.push(new CharPlant(this.char, nx, ny, this.maxSize, this.c));
+            }
         }
         myGarden.myPlants.sort(myGarden.compare);
     }
@@ -255,5 +262,17 @@ class Garden {
         if (a.y > b.y)
             return 1;
         return 0;
+    }
+
+    hasSpaceAt(x, y, radius) {
+        var overlapAllowance = 0.7; // allow ~30% overlap of combined radii
+        for (var i = 0; i < this.myPlants.length; i++) {
+            var other = this.myPlants[i];
+            var minDist = (radius + other.maxSize / 4) * overlapAllowance;
+            if (dist(x, y, other.x, other.y) < minDist) {
+                return false;
+            }
+        }
+        return true;
     }
 }
