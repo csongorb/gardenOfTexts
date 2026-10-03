@@ -194,17 +194,38 @@ class CharPlant {
         }
     }
 
-    plantNewPlants(min, max, range) {
-        var newPlants = random(min, max);
-        for (var i = 0; i < newPlants; i++) {
-            var angle = random(0, 360);
-            var radius = random(0, range);
-            var nx = this.x + radius * cos(angle);
-            var ny = this.y + radius * sin(angle);
-            if (myGarden.hasSpaceAt(nx, ny, this.maxSize / 4)) {
-                myGarden.myPlants.push(new CharPlant(this.char, nx, ny, this.maxSize, this.c));
-            }
+    randomPositionNear(range) {
+        var angle = random(0, 360);
+        var radius = random(0, range);
+        return {
+            x: this.x + radius * cos(angle),
+            y: this.y + radius * sin(angle)
+        };
+    }
+
+    // always plants one successor close to the parent's spot, ignoring the space check,
+    // so a replacement keeps the shape readable even if the area is already crowded
+    plantSuccessor(range) {
+        var pos = this.randomPositionNear(range * 0.10);
+        myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c));
+    }
+
+    // plants one scattered plant at the full range, only if there's enough space for it
+    plantSpread(range) {
+        var pos = this.randomPositionNear(range);
+        if (myGarden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
+            myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c));
         }
+    }
+
+    plantNewPlants(min, max, range) {
+        this.plantSuccessor(range);
+
+        var spreadCount = random(min, max);
+        for (var i = 0; i < spreadCount; i++) {
+            this.plantSpread(range);
+        }
+
         myGarden.myPlants.sort(myGarden.compare);
     }
 
