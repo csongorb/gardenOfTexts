@@ -115,6 +115,18 @@ function varyColor(baseColor, amount) {
     return color(r, g, b);
 }
 
+function ensureMinBrightness(col, minBrightness) {
+    var r = red(col), g = green(col), b = blue(col);
+    var brightness = (r + g + b) / 3;
+    if (brightness < minBrightness) {
+        var boost = minBrightness - brightness;
+        r = constrain(r + boost, 0, 255);
+        g = constrain(g + boost, 0, 255);
+        b = constrain(b + boost, 0, 255);
+    }
+    return color(r, g, b);
+}
+
 class CharPlant {
 
     constructor(_char, _xPos, _yPos, _maxSize, _parentColor, _parentGrowthSpeed) {
@@ -124,7 +136,7 @@ class CharPlant {
         this.maxSize = _maxSize + random(-_maxSize / 12, _maxSize / 12);
         this.size = 1;
         this.tilt = random(-8, 8);
-        this.c = _parentColor ? varyColor(_parentColor, 40) : color(random(0, 255), random(0, 255), random(0, 255));
+        this.c = ensureMinBrightness(_parentColor ? varyColor(_parentColor, 40) : color(random(0, 255), random(0, 255), random(0, 255)), 75);
         this.fruitC = color(0, 220, 0);
         this.fruitW = 0.0;
         this.growthSpeed = _parentGrowthSpeed ? constrain(_parentGrowthSpeed + random(-_parentGrowthSpeed / 6, _parentGrowthSpeed / 6), 0.02, 0.3) : 0.1; // per second
