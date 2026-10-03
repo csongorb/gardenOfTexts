@@ -101,22 +101,12 @@ class CharPlant {
         this.startMaturingAt = 0.8;
         this.isGrown = false;
         this.isMaturing = false;
+        this.isDead = false;
     }
 
     preGrow() {
         this.size = random(this.maxSize / 2, this.maxSize);
         this.spreadRange = this.maxSize * 0.8;
-    }
-
-    reset() {
-        this.size = 1;
-        this.isGrown = false;
-        this.isMaturing = false;
-        this.fruitW = 0.0;
-
-        var v = this.maxSize / 4;
-        this.x = this.x + random(-v, v);
-        this.y = this.y + random(-v, v);
     }
 
     displayPlants() {
@@ -189,14 +179,14 @@ class CharPlant {
         }
 
         if (this.isGrown) {
-            this.reset();
             this.plantNewPlants(0, 3, this.spreadRange);
+            this.isDead = true; // replaced by its successor, rather than cloning itself alongside it
         }
     }
 
-    randomPositionNear(range) {
+    randomPositionNear(maxRadius) {
         var angle = random(0, 360);
-        var radius = random(0, range);
+        var radius = random(0, maxRadius);
         return {
             x: this.x + radius * cos(angle),
             y: this.y + radius * sin(angle)
@@ -206,7 +196,8 @@ class CharPlant {
     // always plants one successor close to the parent's spot, ignoring the space check,
     // so a replacement keeps the shape readable even if the area is already crowded
     plantSuccessor(range) {
-        var pos = this.randomPositionNear(range * 0.10);
+        var maxRadius = this.maxSize / 8; // stays within its own ground-circle radius
+        var pos = this.randomPositionNear(maxRadius);
         myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c));
     }
 
@@ -225,8 +216,6 @@ class CharPlant {
         for (var i = 0; i < spreadCount; i++) {
             this.plantSpread(range);
         }
-
-        myGarden.myPlants.sort(myGarden.compare);
     }
 
     mouseOver() {
@@ -271,6 +260,10 @@ class Garden {
         for (var i = 0; i < myGarden.myPlants.length; i++) {
             this.myPlants[i].grow();
         }
+        this.myPlants = this.myPlants.filter(function (plant) {
+            return !plant.isDead;
+        });
+        this.myPlants.sort(this.compare);
         for (var i = 0; i < myGarden.myPlants.length; i++) {
             this.myPlants[i].displayGround();
         }
