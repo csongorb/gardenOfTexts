@@ -17,10 +17,9 @@ function draw() {
 }
 
 function mouseClicked() {
-    for (var i = 0; i < myGarden.myPlants.length; i++) {
-        if (myGarden.myPlants[i].mouseOver() && myGarden.myPlants[i].isMaturing) {
-            myGarden.myPlants[i].reset();
-            myGarden.myPlants[i].plantNewPlants(0, 3, myGarden.myPlants[i].spreadRange);
+    for (var i = myGarden.myPlants.length - 1; i >= 0; i--) {
+        if (myGarden.myPlants[i].mouseOver()) {
+            myGarden.myPlants.splice(i, 1);
         }
     }
 }
