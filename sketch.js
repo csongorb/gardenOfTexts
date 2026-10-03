@@ -1,6 +1,6 @@
 var myGarden;
 
-var DEBUG = false;
+var DEBUG = true;
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -177,7 +177,7 @@ class CharPlant {
                 g = 0;
             }
 
-            if (this.mouseOver()) {
+            if (this.mouseOver() || (DEBUG && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
                 g = g * 20;
             }
 
@@ -190,7 +190,7 @@ class CharPlant {
 
         if (this.isGrown) {
             this.reset();
-            this.plantNewPlants(0, 2, this.spreadRange);
+            this.plantNewPlants(0, 3, this.spreadRange);
         }
     }
 
