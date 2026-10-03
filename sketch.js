@@ -76,15 +76,22 @@ function getGardenLines() {
 // CharPlant
 // =================================
 
+function varyColor(baseColor, amount) {
+    var r = constrain(red(baseColor) + random(-amount, amount), 0, 255);
+    var g = constrain(green(baseColor) + random(-amount, amount), 0, 255);
+    var b = constrain(blue(baseColor) + random(-amount, amount), 0, 255);
+    return color(r, g, b);
+}
+
 class CharPlant {
-    constructor(_char, _xPos, _yPos, _maxSize) {
+    constructor(_char, _xPos, _yPos, _maxSize, _parentColor) {
         this.char = _char;
         this.x = _xPos;
         this.y = _yPos;
         this.maxSize = _maxSize + random(-_maxSize / 12, _maxSize / 12);
         this.size = 1;
         this.tilt = random(-8, 8);
-        this.c = color(random(0, 255), random(0, 255), random(0, 255));
+        this.c = _parentColor ? varyColor(_parentColor, 30) : color(random(0, 255), random(0, 255), random(0, 255));
         this.fruitC = color(0, 220, 0);
         this.fruitW = 0.0;
         this.growthSpeed = 0.1; // per second
@@ -179,7 +186,7 @@ class CharPlant {
     plantNewPlants(min, max, range) {
         var newPlants = random(min, max);
         for (var i = 0; i < newPlants; i++) {
-            myGarden.myPlants.push(new CharPlant(this.char, this.x + random(-range, range), this.y + random(-range, range), this.maxSize));
+            myGarden.myPlants.push(new CharPlant(this.char, this.x + random(-range, range), this.y + random(-range, range), this.maxSize, this.c));
         }
         myGarden.myPlants.sort(myGarden.compare);
     }
