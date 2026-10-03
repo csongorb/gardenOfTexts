@@ -198,6 +198,7 @@ class Garden {
     plantTextWithCharPlants(text, xPos, yPos, maxCharSize) {
         var splitString = text.split('');
         for (var i = 0; i < splitString.length; i++) {
+            if (splitString[i] === ' ') continue;
             this.myPlants.push(new CharPlant(splitString[i], xPos + (i * maxCharSize / 2), yPos, maxCharSize));
         }
     }
