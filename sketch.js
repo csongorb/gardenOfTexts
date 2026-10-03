@@ -39,6 +39,39 @@ function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
 
+function resolveCoord(value, mid) {
+    var s = String(value).trim();
+    if (s === 'center') {
+        return mid;
+    }
+    // a literal "+" in a URL query value is decoded as a space (e.g. "center+180" arrives as "center 180")
+    var m = s.match(/^center\s*([+-]?\d+(\.\d+)?)$/);
+    if (m) {
+        return mid + Number(m[1]);
+    }
+    return Number(s);
+}
+
+function getGardenLines() {
+    var rawLines = new URLSearchParams(window.location.search).getAll('line');
+    var lines = [];
+    for (var i = 0; i < rawLines.length; i++) {
+        var parts = rawLines[i].split(',');
+        lines.push({
+            text: parts[0],
+            x: parts[1] !== undefined ? parts[1] : 'center',
+            y: parts[2] !== undefined ? parts[2] : 'center',
+            size: parts[3] !== undefined ? Number(parts[3]) : 80
+        });
+    }
+    if (lines.length === 0) {
+        lines.push({ text: 'Garden', x: 'center', y: 'center-100', size: 120 });
+        lines.push({ text: 'of', x: 'center', y: 'center', size: 80 });
+        lines.push({ text: 'Texts', x: 'center', y: 'center+100', size: 120 });
+    }
+    return lines;
+}
+
 // =================================
 // CharPlant
 // =================================
@@ -174,8 +207,14 @@ class Garden {
     }
 
     plant() {
-        this.plantTextWithCharPlants("Game Gardening Simulator", windowWidth / 2 - 460, windowHeight / 2 - 30, 80);
-        this.plantTextWithCharPlants("2018", windowWidth / 2 - 100, windowHeight / 2 + 180, 120);
+        var lines = getGardenLines();
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            var lineWidth = (line.text.length - 1) * (line.size / 2);
+            var xPos = resolveCoord(line.x, windowWidth / 2) - lineWidth / 2;
+            var yPos = resolveCoord(line.y, windowHeight / 2);
+            this.plantTextWithCharPlants(line.text, xPos, yPos, line.size);
+        }
 
         for (var i = 0; i < this.myPlants.length; i++) {
             this.myPlants[i].preGrow();
