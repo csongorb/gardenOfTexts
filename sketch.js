@@ -6,6 +6,10 @@ var DEBUG = false;
 var growRadius = 100; // how far from the mouse plants get the hover growth boost
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
 
+var GARDEN_STORAGE_KEY = 'gardenOfTextState';
+var GARDEN_SAVE_INTERVAL = 5000; // ms
+var gardenLineSignature = ''; // identifies which ?line=... params the saved garden belongs to
+
 function ellipticalDist(x1, y1, x2, y2) {
     var dx = x1 - x2;
     var dy = (y1 - y2) / PERSPECTIVE;
@@ -18,13 +22,24 @@ function setup() {
     angleMode(DEGREES);
 
     myGarden = new Garden();
-    myGarden.plant();
+
+    gardenLineSignature = JSON.stringify(new URLSearchParams(window.location.search).getAll('line'));
+    if (!myGarden.loadState()) {
+        myGarden.plant();
+    }
 
     document.addEventListener('mouseleave', function () {
         mouseOverCanvas = false;
     });
     document.addEventListener('mouseenter', function () {
         mouseOverCanvas = true;
+    });
+
+    setInterval(function () {
+        myGarden.saveState();
+    }, GARDEN_SAVE_INTERVAL);
+    window.addEventListener('beforeunload', function () {
+        myGarden.saveState();
     });
 }
 
@@ -127,6 +142,18 @@ function ensureMinBrightness(col, minBrightness) {
     return color(r, g, b);
 }
 
+function charPlantFromSerialized(data) {
+    var plant = new CharPlant(data.char, data.x, data.y, data.maxSize);
+    plant.maxSize = data.maxSize;
+    plant.size = data.size;
+    plant.tilt = data.tilt;
+    plant.spreadRange = data.spreadRange;
+    plant.isMaturing = data.isMaturing;
+    plant.growthSpeed = data.growthSpeed;
+    plant.c = color(data.r, data.g, data.b);
+    return plant;
+}
+
 class CharPlant {
 
     constructor(_char, _xPos, _yPos, _maxSize, _parentColor, _parentGrowthSpeed) {
@@ -150,6 +177,23 @@ class CharPlant {
     preGrow() {
         this.size = random(this.maxSize / 2, this.maxSize);
         this.spreadRange = this.maxSize * 0.8;
+    }
+
+    serialize() {
+        return {
+            char: this.char,
+            x: this.x,
+            y: this.y,
+            maxSize: this.maxSize,
+            size: this.size,
+            tilt: this.tilt,
+            spreadRange: this.spreadRange,
+            isMaturing: this.isMaturing,
+            growthSpeed: this.growthSpeed,
+            r: red(this.c),
+            g: green(this.c),
+            b: blue(this.c)
+        };
     }
 
     displayPlants() {
@@ -309,6 +353,31 @@ class Garden {
             this.myPlants[i].preGrow();
         }
         this.myPlants.sort(this.compare);
+    }
+
+    saveState() {
+        try {
+            var data = this.myPlants.map(function (plant) {
+                return plant.serialize();
+            });
+            localStorage.setItem(GARDEN_STORAGE_KEY, JSON.stringify({ signature: gardenLineSignature, plants: data }));
+        } catch (e) {
+            // localStorage unavailable (e.g. private browsing) - skip saving
+        }
+    }
+
+    loadState() {
+        try {
+            var raw = localStorage.getItem(GARDEN_STORAGE_KEY);
+            if (!raw) return false;
+            var saved = JSON.parse(raw);
+            if (!saved || saved.signature !== gardenLineSignature) return false; // different ?line=... params - start fresh
+            if (!Array.isArray(saved.plants) || saved.plants.length === 0) return false;
+            this.myPlants = saved.plants.map(charPlantFromSerialized);
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
     display() {
