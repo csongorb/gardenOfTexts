@@ -13,7 +13,7 @@ function setup() {
 }
 
 function draw() {
-    background(50);
+    background(20);
     strokeWeight(2);
 
     myGarden.display();
@@ -178,11 +178,8 @@ function Garden() {
     this.startPos = 100;
 
     this.plant = function() {
-        this.plantTextWithCharPlants("happy birthday!!!", random(windowWidth-800)+400, random(windowHeight), 60);
-
-		for (var i = 0; i < 39-1; i++) {
-            this.plantTextWithCharPlants(" "+i+" ", random(windowWidth), random(windowHeight), 40);
-        }
+        this.plantTextWithCharPlants("Game Gardening Simulator", windowWidth/2 - 460, windowHeight/2 - 30, 80);
+		this.plantTextWithCharPlants("2018", windowWidth/2 - 100, windowHeight/2 + 180, 120);
 
         for (var i = 0; i < this.myPlants.length; i++) {
             this.myPlants[i].preGrow();
