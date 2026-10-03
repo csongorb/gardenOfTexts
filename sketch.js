@@ -1,5 +1,7 @@
 var myGarden;
 
+var DEBUG = false;
+
 function setup() {
     createCanvas(windowWidth, windowHeight);
 
@@ -103,7 +105,7 @@ class CharPlant {
 
     preGrow() {
         this.size = random(this.maxSize / 2, this.maxSize);
-        this.spreadRange = this.maxSize * 1.2;
+        this.spreadRange = this.maxSize * 0.8;
     }
 
     reset() {
@@ -145,6 +147,13 @@ class CharPlant {
 
         ellipseMode(CENTER);
         ellipse(this.x, this.y, this.maxSize / 2, this.maxSize / 4);
+
+        if (DEBUG && this.mouseOver()) {
+            noFill();
+            stroke(255, 80, 80);
+            strokeWeight(1);
+            ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2);
+        }
     }
 
     grow() {
@@ -188,8 +197,10 @@ class CharPlant {
     plantNewPlants(min, max, range) {
         var newPlants = random(min, max);
         for (var i = 0; i < newPlants; i++) {
-            var nx = this.x + random(-range, range);
-            var ny = this.y + random(-range, range);
+            var angle = random(0, 360);
+            var radius = random(0, range);
+            var nx = this.x + radius * cos(angle);
+            var ny = this.y + radius * sin(angle);
             if (myGarden.hasSpaceAt(nx, ny, this.maxSize / 4)) {
                 myGarden.myPlants.push(new CharPlant(this.char, nx, ny, this.maxSize, this.c));
             }
