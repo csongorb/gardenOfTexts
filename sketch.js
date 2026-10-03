@@ -86,7 +86,7 @@ function varyColor(baseColor, amount) {
 
 class CharPlant {
 
-    constructor(_char, _xPos, _yPos, _maxSize, _parentColor) {
+    constructor(_char, _xPos, _yPos, _maxSize, _parentColor, _parentGrowthSpeed) {
         this.char = _char;
         this.x = _xPos;
         this.y = _yPos;
@@ -96,7 +96,7 @@ class CharPlant {
         this.c = _parentColor ? varyColor(_parentColor, 40) : color(random(0, 255), random(0, 255), random(0, 255));
         this.fruitC = color(0, 220, 0);
         this.fruitW = 0.0;
-        this.growthSpeed = 0.1; // per second
+        this.growthSpeed = _parentGrowthSpeed ? constrain(_parentGrowthSpeed + random(-_parentGrowthSpeed / 6, _parentGrowthSpeed / 6), 0.02, 0.3) : 0.1; // per second
         this.spreadRange = this.maxSize;
         this.startMaturingAt = 0.8;
         this.isGrown = false;
@@ -198,14 +198,14 @@ class CharPlant {
     plantSuccessor(range) {
         var maxRadius = this.maxSize / 8; // stays within its own ground-circle radius
         var pos = this.randomPositionNear(maxRadius);
-        myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c));
+        myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c, this.growthSpeed));
     }
 
     // plants one scattered plant at the full range, only if there's enough space for it
     plantSpread(range) {
         var pos = this.randomPositionNear(range);
         if (myGarden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
-            myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c));
+            myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c, this.growthSpeed));
         }
     }
 
