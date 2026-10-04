@@ -3,7 +3,9 @@ var myGarden;
 var mouseOverCanvas = true;
 
 var DEBUG = false;
-var growRadius = 100; // how far from the mouse plants get the hover growth boost
+var toolRadius = 100; // size of the tool circle around the mouse (mouse wheel changes it)
+var toolMode = 'water'; // 'water': hovering boosts growth / 'cut': left click removes plants; right click toggles
+var TOOL_COLORS = { water: [5, 30, 95], cut: [90, 10, 10] };
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
 
 var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to the screen center
@@ -42,6 +44,11 @@ function setup() {
         myGarden.plant();
     }
 
+    // right click is used to switch tools, so suppress the browser's context menu
+    document.addEventListener('contextmenu', function (event) {
+        event.preventDefault();
+    });
+
     document.addEventListener('mouseleave', function () {
         mouseOverCanvas = false;
     });
@@ -57,13 +64,13 @@ function setup() {
     });
 }
 
-function drawWateringCircle() {
+function drawToolCircle() {
     if (mouseOverCanvas) {
         noStroke();
-        fill(5, 30, 95);
+        fill(TOOL_COLORS[toolMode]);
         ellipseMode(CENTER);
         var mouse = gardenMouse();
-        ellipse(mouse.x, mouse.y, growRadius * 2, growRadius * 2 * PERSPECTIVE);
+        ellipse(mouse.x, mouse.y, toolRadius * 2, toolRadius * 2 * PERSPECTIVE);
     }
 }
 
@@ -77,16 +84,18 @@ function draw() {
     pop();
 }
 
-function mouseClicked() {
-    for (var i = myGarden.myPlants.length - 1; i >= 0; i--) {
-        if (myGarden.myPlants[i].mouseOver()) {
-            myGarden.myPlants.splice(i, 1);
-        }
+function mousePressed(event) {
+    if (event.button === 2) { // right click
+        toolMode = toolMode === 'water' ? 'cut' : 'water';
+    } else if (event.button === 0 && toolMode === 'cut') { // left click
+        myGarden.myPlants = myGarden.myPlants.filter(function (plant) {
+            return !plant.mouseOver(toolRadius);
+        });
     }
 }
 
 function mouseWheel(event) {
-    growRadius = constrain(growRadius - event.delta * 0.1, 30, 500);
+    toolRadius = constrain(toolRadius - event.delta * 0.1, 30, 500);
     return false; // prevent the page itself from scrolling
 }
 
@@ -249,7 +258,7 @@ class CharPlant {
         }
     }
 
-    // drawn after the watering circle, so a plant's outline stays visible even where the watering circle covers it
+    // drawn after the tool circle, so a plant's outline stays visible even where the tool circle covers it
     displayGroundOutline() {
         noFill();
         ellipseMode(CENTER);
@@ -257,12 +266,6 @@ class CharPlant {
         stroke(80); // same color as the ground fill
         strokeWeight(1.5);
         ellipse(this.x, this.y, this.maxSize / 2, (this.maxSize / 2) * PERSPECTIVE);
-
-        if (this.mouseOver()) {
-            stroke(255, 60, 60);
-            strokeWeight(2);
-            ellipse(this.x, this.y, this.maxSize / 2, (this.maxSize / 2) * PERSPECTIVE);
-        }
     }
 
     grow() {
@@ -286,7 +289,7 @@ class CharPlant {
                 g = 0;
             }
 
-            if (this.mouseOver(growRadius) || (DEBUG && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
+            if ((toolMode === 'water' && mouseOverCanvas && this.mouseOver(toolRadius)) || (DEBUG && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
                 g = g * 20;
             }
 
@@ -415,7 +418,7 @@ class Garden {
         for (var i = 0; i < myGarden.myPlants.length; i++) {
             this.myPlants[i].displayGroundFill();
         }
-        drawWateringCircle();
+        drawToolCircle();
         for (var i = 0; i < myGarden.myPlants.length; i++) {
             this.myPlants[i].displayGroundOutline();
         }
