@@ -21,6 +21,15 @@ function gardenMouse() {
     return { x: mouseX - width / 2, y: mouseY - height / 2 };
 }
 
+// true if a plant of the given size at (x, y) would be fully on screen
+// (text is drawn centered horizontally, above its baseline at y)
+function isOnScreen(x, y, size) {
+    var halfW = width / 2;
+    var halfH = height / 2;
+    return x - size / 2 >= -halfW && x + size / 2 <= halfW &&
+           y - size >= -halfH && y + size / 4 <= halfH;
+}
+
 function setup() {
     createCanvas(windowWidth, windowHeight);
 
@@ -308,13 +317,16 @@ class CharPlant {
     plantSuccessor(range) {
         var maxRadius = this.maxSize / 8; // stays within its own ground-circle radius
         var pos = this.randomPositionNear(maxRadius);
+        if (!isOnScreen(pos.x, pos.y, this.maxSize)) {
+            pos = { x: this.x, y: this.y }; // don't drift off screen - stay on the parent's spot instead
+        }
         myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c, this.growthSpeed));
     }
 
-    // plants one scattered plant at the full range, only if there's enough space for it
+    // plants one scattered plant at the full range, only if it's on screen and there's enough space for it
     plantSpread(range) {
         var pos = this.randomPositionNear(range);
-        if (myGarden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
+        if (isOnScreen(pos.x, pos.y, this.maxSize) && myGarden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
             myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c, this.growthSpeed));
         }
     }
