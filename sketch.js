@@ -6,7 +6,7 @@ var DEBUG = false;
 var growRadius = 100; // how far from the mouse plants get the hover growth boost
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
 
-var GARDEN_STORAGE_KEY = 'gardenOfTextState';
+var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to the screen center
 var GARDEN_SAVE_INTERVAL = 5000; // ms
 var gardenLineSignature = ''; // identifies which ?line=... params the saved garden belongs to
 
@@ -14,6 +14,11 @@ function ellipticalDist(x1, y1, x2, y2) {
     var dx = x1 - x2;
     var dy = (y1 - y2) / PERSPECTIVE;
     return sqrt(dx * dx + dy * dy);
+}
+
+// the garden's origin (0, 0) is the center of the screen, so it stays centered when the window is resized
+function gardenMouse() {
+    return { x: mouseX - width / 2, y: mouseY - height / 2 };
 }
 
 function setup() {
@@ -48,7 +53,8 @@ function drawWateringCircle() {
         noStroke();
         fill(5, 30, 95);
         ellipseMode(CENTER);
-        ellipse(mouseX, mouseY, growRadius * 2, growRadius * 2 * PERSPECTIVE);
+        var mouse = gardenMouse();
+        ellipse(mouse.x, mouse.y, growRadius * 2, growRadius * 2 * PERSPECTIVE);
     }
 }
 
@@ -56,7 +62,10 @@ function draw() {
     background(20);
     strokeWeight(2);
 
+    push();
+    translate(width / 2, height / 2);
     myGarden.display();
+    pop();
 }
 
 function mouseClicked() {
@@ -86,17 +95,19 @@ function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
 
-function resolveCoord(value, mid) {
+// returns a coordinate relative to the screen center
+// ("center" -> 0, "center+180" -> 180, a plain number is measured from the left/top edge of the current window)
+function resolveCoord(value, screenSize) {
     var s = String(value).trim();
     if (s === 'center') {
-        return mid;
+        return 0;
     }
     // a literal "+" in a URL query value is decoded as a space (e.g. "center+180" arrives as "center 180")
     var m = s.match(/^center\s*([+-]?\d+(\.\d+)?)$/);
     if (m) {
-        return mid + Number(m[1]);
+        return Number(m[1]);
     }
-    return Number(s);
+    return Number(s) - screenSize / 2;
 }
 
 function getGardenLines() {
@@ -319,7 +330,8 @@ class CharPlant {
 
     mouseOver(radius) {
         var r = false;
-        var d = ellipticalDist(mouseX, mouseY, this.x, this.y);
+        var mouse = gardenMouse();
+        var d = ellipticalDist(mouse.x, mouse.y, this.x, this.y);
         if (d < (radius || 10)) {
             r = true;
         }
@@ -344,8 +356,8 @@ class Garden {
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i];
             var lineWidth = (line.text.length - 1) * (line.size / 2);
-            var xPos = resolveCoord(line.x, windowWidth / 2) - lineWidth / 2;
-            var yPos = resolveCoord(line.y, windowHeight / 2);
+            var xPos = resolveCoord(line.x, width) - lineWidth / 2;
+            var yPos = resolveCoord(line.y, height);
             this.plantTextWithCharPlants(line.text, xPos, yPos, line.size);
         }
 
