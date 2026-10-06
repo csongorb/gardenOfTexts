@@ -16,6 +16,7 @@ var GROW_DURATION_MIN = 120;
 var GROW_DURATION_MAX = 1800;
 var GROW_DURATION_MUTATION = 1 / 12; // a child's grow duration = parent's +/- up to this fraction
 var COLOR_MUTATION = 35; // a child's r, g and b = parent's +/- up to this amount (0-255)
+var FRUIT_SATURATION_BOOST = 1.5; // the fruiting outline is the plant's color at full brightness, with saturation multiplied by this
 
 var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to the screen center
 var GARDEN_SAVE_INTERVAL = 5000; // ms
@@ -43,6 +44,7 @@ function isOnScreen(x, y, size) {
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
+    pixelDensity(1); // on HiDPI/Retina screens p5 would otherwise draw 4x as many pixels
 
     angleMode(DEGREES);
 
@@ -188,6 +190,19 @@ function varyColor(baseColor, amount) {
     return color(r, g, b);
 }
 
+// same hue, but full brightness and boosted saturation (rgb as [r, g, b], 0-255)
+function intensifyColor(rgb) {
+    var mx = Math.max(rgb[0], rgb[1], rgb[2]);
+    var mn = Math.min(rgb[0], rgb[1], rgb[2]);
+    if (mx === mn) {
+        return [255, 255, 255]; // grey has no hue to intensify
+    }
+    var saturation = Math.min(1, ((mx - mn) / mx) * FRUIT_SATURATION_BOOST);
+    return rgb.map(function (c) {
+        return 255 * (1 - saturation * (mx - c) / (mx - mn));
+    });
+}
+
 function ensureMinBrightness(col, minBrightness) {
     var r = red(col), g = green(col), b = blue(col);
     var brightness = (r + g + b) / 3;
@@ -208,7 +223,7 @@ function charPlantFromSerialized(data) {
     plant.spreadRange = data.spreadRange;
     plant.isMaturing = data.isMaturing;
     plant.growDuration = data.growDuration;
-    plant.c = color(data.r, data.g, data.b);
+    plant.setColor(color(data.r, data.g, data.b));
     return plant;
 }
 
@@ -222,8 +237,8 @@ class CharPlant {
         this.maxSize = constrain(_maxSize + random(-_maxSize * SIZE_MUTATION, _maxSize * SIZE_MUTATION), _baseSize * SIZE_MIN_FACTOR, _baseSize * SIZE_MAX_FACTOR);
         this.size = 1;
         this.tilt = random(-8, 8);
-        this.c = ensureMinBrightness(_parentColor ? varyColor(_parentColor, COLOR_MUTATION) : color(random(0, 255), random(0, 255), random(0, 255)), 75);
-        this.fruitC = color(0, 220, 0);
+        this.setColor(ensureMinBrightness(_parentColor ? varyColor(_parentColor, COLOR_MUTATION) : color(random(0, 255), random(0, 255), random(0, 255)), 75));
+        this.fruitStr = this.cStr;
         this.fruitW = 0.0;
         var duration = _parentGrowDuration || GROW_DURATION_DEFAULT;
         this.growDuration = constrain(duration + random(-duration * GROW_DURATION_MUTATION, duration * GROW_DURATION_MUTATION), GROW_DURATION_MIN, GROW_DURATION_MAX); // seconds to full size
@@ -232,6 +247,14 @@ class CharPlant {
         this.isGrown = false;
         this.isMaturing = false;
         this.isDead = false;
+    }
+
+    // caches the color as plain numbers and a CSS string, so drawing doesn't need p5.Color conversions every frame
+    setColor(col) {
+        this.c = col;
+        this.rgb = [red(col), green(col), blue(col)];
+        this.cStr = 'rgb(' + this.rgb[0] + ',' + this.rgb[1] + ',' + this.rgb[2] + ')';
+        this.fruitRgb = intensifyColor(this.rgb);
     }
 
     preGrow() {
@@ -257,22 +280,23 @@ class CharPlant {
         };
     }
 
+    // drawn with the canvas context directly - p5's text()/fill()/stroke() are too slow for hundreds of plants per frame
     displayPlants() {
-        stroke(this.c);
-        strokeWeight(this.fruitW);
-        fill(this.c);
-        textSize(this.size);
-        textAlign(CENTER);
-
-        if (this.isMaturing == true) {
-            stroke(this.fruitC);
+        var ctx = drawingContext;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(radians(this.tilt));
+        ctx.font = this.size + 'px sans-serif'; // p5's default font
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic'; // p5's default BASELINE
+        ctx.fillStyle = this.cStr;
+        ctx.fillText(this.char, 0, 0);
+        if (this.fruitW > 0) {
+            ctx.lineWidth = this.fruitW;
+            ctx.strokeStyle = this.fruitStr;
+            ctx.strokeText(this.char, 0, 0);
         }
-
-        push();
-        translate(this.x, this.y);
-        rotate(this.tilt);
-        text(this.char, 0, 0);
-        pop();
+        ctx.restore();
     }
 
     displayGroundFill() {
@@ -312,7 +336,7 @@ class CharPlant {
 
             if (this.isMaturing) {
                 var l = 1 - (1 - (this.size / this.maxSize)) / (1 - this.startMaturingAt);
-                this.fruitC = lerpColor(this.c, color(220, 0, 0), l);
+                this.fruitStr = 'rgb(' + lerp(this.rgb[0], this.fruitRgb[0], l) + ',' + lerp(this.rgb[1], this.fruitRgb[1], l) + ',' + lerp(this.rgb[2], this.fruitRgb[2], l) + ')';
                 this.fruitW = lerp(0.0, 5.0, l);
             }
 
