@@ -1,5 +1,9 @@
 # Process Journal
 
+## 2026-10-06b: Nothing new
+
+Ah, should have searched for this sooner. AI-shame is a thing.
+
 ## 2026-10-06: Connections
 
 I have just realised that this also has a lot of similarities with my recent ideas for [Growth Capsule](https://github.com/csongorb/growthcapsule) (unfortunately, still not realised there, not even in the [Journal](https://github.com/csongorb/growthcapsule/blob/main/journal/journal.md)):  
