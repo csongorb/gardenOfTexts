@@ -82,6 +82,21 @@ function draw() {
     translate(width / 2, height / 2);
     myGarden.display();
     pop();
+
+    if (DEBUG) {
+        drawDebugInfo();
+    }
+}
+
+function drawDebugInfo() {
+    push();
+    noStroke();
+    fill(220);
+    textSize(16);
+    textAlign(LEFT, TOP);
+    text('plants: ' + myGarden.myPlants.length, 10, 10);
+    text('fps: ' + round(frameRate()), 10, 30);
+    pop();
 }
 
 function mousePressed(event) {
@@ -106,6 +121,11 @@ function keyPressed() {
     if (key === 'f' || key === 'F') {
         var fs = fullscreen();
         fullscreen(!fs);
+    }
+
+    // 1
+    if (key === '1') {
+        DEBUG = !DEBUG;
     }
 }
 
