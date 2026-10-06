@@ -30,6 +30,8 @@ var FRUIT_SATURATION_BOOST = 1.5; // the fruiting outline is the plant's color a
 
 var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to the screen center
 var GARDEN_SAVE_INTERVAL = 5000; // ms
+var TARGET_FPS = 30; // the garden moves slowly - more frames would mostly cost CPU/GPU
+var MAX_FRAME_TIME = 0.1; // s; longer frames (e.g. after a backgrounded tab) count as this long, so nothing jumps
 var gardenLineSignature = ''; // identifies which ?line=... params the saved garden belongs to
 
 function ellipticalDist(x1, y1, x2, y2) {
@@ -55,6 +57,7 @@ function isOnScreen(x, y, size) {
 function setup() {
     createCanvas(windowWidth, windowHeight);
     pixelDensity(1); // on HiDPI/Retina screens p5 would otherwise draw 4x as many pixels
+    frameRate(TARGET_FPS);
 
     angleMode(DEGREES);
 
@@ -117,6 +120,9 @@ function drawDebugInfo() {
     textAlign(LEFT, TOP);
     text('plants: ' + myGarden.myPlants.length, 10, 10);
     text('fps: ' + round(frameRate()), 10, 30);
+    if (window.performance && performance.memory) { // Chrome only
+        text('memory: ' + round(performance.memory.usedJSHeapSize / 1048576) + ' MB', 10, 50);
+    }
     pop();
 }
 
@@ -136,7 +142,6 @@ function mouseWheel(event) {
 }
 
 function keyPressed() {
-    print(keyCode);
 
     // F
     if (key === 'f' || key === 'F') {
@@ -298,7 +303,7 @@ class CharPlant {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(radians(this.tilt));
-        ctx.font = this.size + 'px sans-serif'; // p5's default font
+        ctx.font = Math.round(this.size) + 'px sans-serif'; // p5's default font; whole pixels, so the browser doesn't render & cache glyphs at ever-new fractional sizes
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic'; // p5's default BASELINE
         ctx.fillStyle = this.cStr;
@@ -311,32 +316,22 @@ class CharPlant {
         ctx.restore();
     }
 
-    displayGroundFill() {
-        noStroke();
-        fill(40);
-
-        ellipseMode(CENTER);
-        ellipse(this.x, this.y, this.maxSize / 2, (this.maxSize / 2) * PERSPECTIVE);
-
-        if (DEBUG && this.mouseOver()) {
-            noFill();
-            stroke(255, 80, 80);
-            strokeWeight(1);
-            ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2 * PERSPECTIVE);
-        }
+    // adds this plant's ground ellipse to the current canvas path (all of them are filled/stroked at once by the garden)
+    addGroundToPath(ctx) {
+        var rx = this.maxSize / 4;
+        ctx.moveTo(this.x + rx, this.y); // start a new sub-path, so ellipses aren't connected by lines
+        ctx.ellipse(this.x, this.y, rx, rx * PERSPECTIVE, 0, 0, Math.PI * 2);
     }
 
-    // drawn after the tool circle, so a plant's outline stays visible even where the tool circle covers it
-    displayGroundOutline() {
+    displaySpreadRange() {
         noFill();
+        stroke(255, 80, 80);
+        strokeWeight(1);
         ellipseMode(CENTER);
-
-        stroke(80); // same color as the ground fill
-        strokeWeight(1.5);
-        ellipse(this.x, this.y, this.maxSize / 2, (this.maxSize / 2) * PERSPECTIVE);
+        ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2 * PERSPECTIVE);
     }
 
-    grow() {
+    grow(dt) {
 
         if (!this.isMaturing) {
             if (this.size / this.maxSize >= this.startMaturingAt) {
@@ -352,10 +347,7 @@ class CharPlant {
                 this.fruitW = lerp(0.0, 5.0, l);
             }
 
-            var g = (1.0 / frameRate()) * (this.maxSize / this.growDuration); // full size after growDuration seconds, regardless of size
-            if (g == "Infinity") {
-                g = 0;
-            }
+            var g = dt * (this.maxSize / this.growDuration); // full size after growDuration seconds, regardless of size
 
             if ((toolMode === 'water' && mouseOverCanvas && this.mouseOver(toolRadius)) || (DEBUG && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
                 g = g * 20;
@@ -391,7 +383,7 @@ class CharPlant {
         if (!isOnScreen(pos.x, pos.y, this.maxSize)) {
             pos = { x: this.x, y: this.y }; // don't drift off screen - stay on the parent's spot instead
         }
-        myGarden.myPlants.push(this.makeChild(pos.x, pos.y));
+        myGarden.addPlant(this.makeChild(pos.x, pos.y));
     }
 
     // a new seedling at (x, y), inheriting this plant's genes (with mutation) and lineage
@@ -404,7 +396,7 @@ class CharPlant {
     plantSpread(range) {
         var pos = this.randomPositionNear(range);
         if (isOnScreen(pos.x, pos.y, this.maxSize) && myGarden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
-            myGarden.myPlants.push(this.makeChild(pos.x, pos.y));
+            myGarden.addPlant(this.makeChild(pos.x, pos.y));
             return true;
         }
         return false;
@@ -440,6 +432,7 @@ class Garden {
     constructor() {
         this.myPlants = []; // array of objects
         this.lineageMemory = []; // per lineage (original letter): its last seen living plant, so an extinct lineage can sprout again there
+        this.needsSort = true;
 
         this.rowPos = 100;
         this.startPos = 100;
@@ -458,7 +451,6 @@ class Garden {
         for (var i = 0; i < this.myPlants.length; i++) {
             this.myPlants[i].preGrow();
         }
-        this.myPlants.sort(this.compare);
     }
 
     saveState() {
@@ -485,29 +477,62 @@ class Garden {
             var plants = saved.plants.map(charPlantFromSerialized);
             this.lineageMemory = saved.lineageMemory.map(charPlantFromSerialized);
             this.myPlants = plants;
+            this.needsSort = true;
             return true;
         } catch (e) {
             return false;
         }
     }
 
+    // new plants go through here, so the draw order is only re-sorted when something was added
+    addPlant(plant) {
+        this.myPlants.push(plant);
+        this.needsSort = true;
+    }
+
     display() {
+        var dt = Math.min(deltaTime / 1000, MAX_FRAME_TIME); // seconds since the last frame
         for (var i = 0; i < myGarden.myPlants.length; i++) {
-            this.myPlants[i].grow();
+            this.myPlants[i].grow(dt);
         }
         this.myPlants = this.myPlants.filter(function (plant) {
             return !plant.isDead;
         });
-        this.sproutRare();
-        this.myPlants.sort(this.compare);
-        for (var i = 0; i < myGarden.myPlants.length; i++) {
-            this.myPlants[i].displayGroundFill();
+        this.sproutRare(dt);
+        if (this.needsSort) { // removing plants keeps the order, only additions need a sort
+            this.myPlants.sort(this.compare);
+            this.needsSort = false;
         }
+
+        // all ground ellipses as one path, filled and outlined with a single call each (much cheaper than one p5 ellipse() per plant)
+        var ground = new Path2D();
+        for (var i = 0; i < this.myPlants.length; i++) {
+            this.myPlants[i].addGroundToPath(ground);
+        }
+        var ctx = drawingContext;
+        ctx.save();
+        ctx.fillStyle = 'rgb(40,40,40)';
+        ctx.fill(ground);
+        ctx.restore();
+
+        if (DEBUG) {
+            for (var i = 0; i < this.myPlants.length; i++) {
+                if (this.myPlants[i].mouseOver()) {
+                    this.myPlants[i].displaySpreadRange();
+                }
+            }
+        }
+
         drawToolCircle();
-        for (var i = 0; i < myGarden.myPlants.length; i++) {
-            this.myPlants[i].displayGroundOutline();
-        }
-        for (var i = 0; i < myGarden.myPlants.length; i++) {
+
+        // outlines are drawn after the tool circle, so they stay visible even where the tool circle covers them
+        ctx.save();
+        ctx.strokeStyle = 'rgb(80,80,80)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke(ground);
+        ctx.restore();
+
+        for (var i = 0; i < this.myPlants.length; i++) {
             this.myPlants[i].displayPlants();
         }
     }
@@ -517,15 +542,14 @@ class Garden {
         for (var i = 0; i < splitString.length; i++) {
             if (splitString[i] === ' ') continue;
             var plant = new CharPlant(splitString[i], xPos + (i * maxCharSize / 2), yPos, maxCharSize, maxCharSize, undefined, undefined, this.lineageMemory.length);
-            this.myPlants.push(plant);
+            this.addPlant(plant);
             this.lineageMemory.push(plant);
         }
     }
 
     // lineages with few living plants get extra sprouts around their population (the fewer, the likelier);
     // an extinct lineage sprouts again near its last seen plant
-    sproutRare() {
-        var dt = Math.min(deltaTime / 1000, 0.1); // a backgrounded tab shouldn't cause a burst of sprouts
+    sproutRare(dt) {
         var members = this.lineageMemory.map(function () {
             return [];
         });
@@ -554,7 +578,7 @@ class Garden {
             if (parent.plantSpread(parent.spreadRange)) return;
         }
         if (force) {
-            this.myPlants.push(parent.makeChild(parent.x, parent.y));
+            this.addPlant(parent.makeChild(parent.x, parent.y));
         }
     }
 
