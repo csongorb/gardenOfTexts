@@ -8,6 +8,15 @@ var toolMode = 'water'; // 'water': hovering boosts growth / 'cut': left click r
 var TOOL_COLORS = { water: [5, 30, 95], cut: [90, 10, 10] };
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
 
+var SIZE_MIN_FACTOR = 0.6; // a plant's maxSize stays within [SIZE_MIN_FACTOR, SIZE_MAX_FACTOR] x its letter's original size
+var SIZE_MAX_FACTOR = 1.4;
+var SIZE_MUTATION = 1 / 20; // a child's maxSize = parent's +/- up to this fraction
+var GROW_DURATION_DEFAULT = 600; // seconds from seed to full size (without watering)
+var GROW_DURATION_MIN = 120;
+var GROW_DURATION_MAX = 1800;
+var GROW_DURATION_MUTATION = 1 / 12; // a child's grow duration = parent's +/- up to this fraction
+var COLOR_MUTATION = 35; // a child's r, g and b = parent's +/- up to this amount (0-255)
+
 var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to the screen center
 var GARDEN_SAVE_INTERVAL = 5000; // ms
 var gardenLineSignature = ''; // identifies which ?line=... params the saved garden belongs to
@@ -192,30 +201,32 @@ function ensureMinBrightness(col, minBrightness) {
 }
 
 function charPlantFromSerialized(data) {
-    var plant = new CharPlant(data.char, data.x, data.y, data.maxSize);
+    var plant = new CharPlant(data.char, data.x, data.y, data.maxSize, data.baseSize);
     plant.maxSize = data.maxSize;
     plant.size = data.size;
     plant.tilt = data.tilt;
     plant.spreadRange = data.spreadRange;
     plant.isMaturing = data.isMaturing;
-    plant.growthSpeed = data.growthSpeed;
+    plant.growDuration = data.growDuration;
     plant.c = color(data.r, data.g, data.b);
     return plant;
 }
 
 class CharPlant {
 
-    constructor(_char, _xPos, _yPos, _maxSize, _parentColor, _parentGrowthSpeed) {
+    constructor(_char, _xPos, _yPos, _maxSize, _baseSize, _parentColor, _parentGrowDuration) {
         this.char = _char;
         this.x = _xPos;
         this.y = _yPos;
-        this.maxSize = _maxSize + random(-_maxSize / 12, _maxSize / 12);
+        this.baseSize = _baseSize; // the letter's original size, unchanged across generations
+        this.maxSize = constrain(_maxSize + random(-_maxSize * SIZE_MUTATION, _maxSize * SIZE_MUTATION), _baseSize * SIZE_MIN_FACTOR, _baseSize * SIZE_MAX_FACTOR);
         this.size = 1;
         this.tilt = random(-8, 8);
-        this.c = ensureMinBrightness(_parentColor ? varyColor(_parentColor, 40) : color(random(0, 255), random(0, 255), random(0, 255)), 75);
+        this.c = ensureMinBrightness(_parentColor ? varyColor(_parentColor, COLOR_MUTATION) : color(random(0, 255), random(0, 255), random(0, 255)), 75);
         this.fruitC = color(0, 220, 0);
         this.fruitW = 0.0;
-        this.growthSpeed = _parentGrowthSpeed ? constrain(_parentGrowthSpeed + random(-_parentGrowthSpeed / 6, _parentGrowthSpeed / 6), 0.02, 0.3) : 0.1; // per second
+        var duration = _parentGrowDuration || GROW_DURATION_DEFAULT;
+        this.growDuration = constrain(duration + random(-duration * GROW_DURATION_MUTATION, duration * GROW_DURATION_MUTATION), GROW_DURATION_MIN, GROW_DURATION_MAX); // seconds to full size
         this.spreadRange = this.maxSize;
         this.startMaturingAt = 0.8;
         this.isGrown = false;
@@ -238,7 +249,8 @@ class CharPlant {
             tilt: this.tilt,
             spreadRange: this.spreadRange,
             isMaturing: this.isMaturing,
-            growthSpeed: this.growthSpeed,
+            baseSize: this.baseSize,
+            growDuration: this.growDuration,
             r: red(this.c),
             g: green(this.c),
             b: blue(this.c)
@@ -265,7 +277,7 @@ class CharPlant {
 
     displayGroundFill() {
         noStroke();
-        fill(80);
+        fill(40);
 
         ellipseMode(CENTER);
         ellipse(this.x, this.y, this.maxSize / 2, (this.maxSize / 2) * PERSPECTIVE);
@@ -304,7 +316,7 @@ class CharPlant {
                 this.fruitW = lerp(0.0, 5.0, l);
             }
 
-            var g = (1.0 / frameRate()) * this.growthSpeed;
+            var g = (1.0 / frameRate()) * (this.maxSize / this.growDuration); // full size after growDuration seconds, regardless of size
             if (g == "Infinity") {
                 g = 0;
             }
@@ -343,14 +355,14 @@ class CharPlant {
         if (!isOnScreen(pos.x, pos.y, this.maxSize)) {
             pos = { x: this.x, y: this.y }; // don't drift off screen - stay on the parent's spot instead
         }
-        myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c, this.growthSpeed));
+        myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.baseSize, this.c, this.growDuration));
     }
 
     // plants one scattered plant at the full range, only if it's on screen and there's enough space for it
     plantSpread(range) {
         var pos = this.randomPositionNear(range);
         if (isOnScreen(pos.x, pos.y, this.maxSize) && myGarden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
-            myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.c, this.growthSpeed));
+            myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.baseSize, this.c, this.growDuration));
         }
     }
 
@@ -451,7 +463,7 @@ class Garden {
         var splitString = text.split('');
         for (var i = 0; i < splitString.length; i++) {
             if (splitString[i] === ' ') continue;
-            this.myPlants.push(new CharPlant(splitString[i], xPos + (i * maxCharSize / 2), yPos, maxCharSize));
+            this.myPlants.push(new CharPlant(splitString[i], xPos + (i * maxCharSize / 2), yPos, maxCharSize, maxCharSize));
         }
     }
 
