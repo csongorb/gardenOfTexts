@@ -15,7 +15,15 @@ var GROW_DURATION_DEFAULT = 600; // seconds from seed to full size (without wate
 var GROW_DURATION_MIN = 120;
 var GROW_DURATION_MAX = 1800;
 var GROW_DURATION_MUTATION = 1 / 12; // a child's grow duration = parent's +/- up to this fraction
-var COLOR_MUTATION = 35; // a child's r, g and b = parent's +/- up to this amount (0-255)
+var COLOR_MUTATION = 25; // a child's r, g and b = parent's +/- up to this amount (0-255)
+
+var SPREAD_RANGE_FACTOR = 0.8; // seeds land up to this x maxSize away from the parent
+var INITIAL_SPREAD_RANGE_FACTOR = 0.6; // same, for the initially planted text (keeps it readable at first)
+var SEEDS_MIN = 0; // number of scattered seeds per grown plant (besides its successor)
+var SEEDS_MAX = 3;
+var ALWAYS_PLANT_SUCCESSOR = false; // true: a grown plant is always replaced near its spot (keeps the text readable); false: only seeds that find space, so plants can die out
+var SUCCESSOR_DRIFT_FACTOR = 1 / 8; // the successor lands up to this x maxSize away from its parent (ignores the space check)
+var SPACE_OVERLAP_ALLOWANCE = 0.9; // a seed needs distance >= (sum of ground-circle radii) x this; 1 = ground circles may only touch, smaller = more overlap
 var FRUIT_SATURATION_BOOST = 1.5; // the fruiting outline is the plant's color at full brightness, with saturation multiplied by this
 
 var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to the screen center
@@ -242,7 +250,7 @@ class CharPlant {
         this.fruitW = 0.0;
         var duration = _parentGrowDuration || GROW_DURATION_DEFAULT;
         this.growDuration = constrain(duration + random(-duration * GROW_DURATION_MUTATION, duration * GROW_DURATION_MUTATION), GROW_DURATION_MIN, GROW_DURATION_MAX); // seconds to full size
-        this.spreadRange = this.maxSize;
+        this.spreadRange = this.maxSize * SPREAD_RANGE_FACTOR;
         this.startMaturingAt = 0.8;
         this.isGrown = false;
         this.isMaturing = false;
@@ -259,7 +267,7 @@ class CharPlant {
 
     preGrow() {
         this.size = random(this.maxSize / 2, this.maxSize);
-        this.spreadRange = this.maxSize * 0.8;
+        this.spreadRange = this.maxSize * INITIAL_SPREAD_RANGE_FACTOR;
     }
 
     serialize() {
@@ -357,8 +365,8 @@ class CharPlant {
         }
 
         if (this.isGrown) {
-            this.plantNewPlants(0, 3, this.spreadRange);
-            this.isDead = true; // replaced by its successor, rather than cloning itself alongside it
+            this.isDead = true; // set before planting, so the parent's own spot counts as free for its seeds
+            this.plantNewPlants(SEEDS_MIN, SEEDS_MAX, this.spreadRange);
         }
     }
 
@@ -374,7 +382,7 @@ class CharPlant {
     // always plants one successor close to the parent's spot, ignoring the space check,
     // so a replacement keeps the shape readable even if the area is already crowded
     plantSuccessor(range) {
-        var maxRadius = this.maxSize / 8; // stays within its own ground-circle radius
+        var maxRadius = this.maxSize * SUCCESSOR_DRIFT_FACTOR;
         var pos = this.randomPositionNear(maxRadius);
         if (!isOnScreen(pos.x, pos.y, this.maxSize)) {
             pos = { x: this.x, y: this.y }; // don't drift off screen - stay on the parent's spot instead
@@ -391,7 +399,9 @@ class CharPlant {
     }
 
     plantNewPlants(min, max, range) {
-        this.plantSuccessor(range);
+        if (ALWAYS_PLANT_SUCCESSOR) {
+            this.plantSuccessor(range);
+        }
 
         var spreadCount = random(min, max);
         for (var i = 0; i < spreadCount; i++) {
@@ -500,10 +510,10 @@ class Garden {
     }
 
     hasSpaceAt(x, y, radius) {
-        var overlapAllowance = 0.7; // allow ~30% overlap of combined radii
         for (var i = 0; i < this.myPlants.length; i++) {
             var other = this.myPlants[i];
-            var minDist = (radius + other.maxSize / 4) * overlapAllowance;
+            if (other.isDead) continue;
+            var minDist = (radius + other.maxSize / 4) * SPACE_OVERLAP_ALLOWANCE;
             if (ellipticalDist(x, y, other.x, other.y) < minDist) {
                 return false;
             }
