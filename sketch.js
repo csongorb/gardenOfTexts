@@ -19,11 +19,13 @@ var COLOR_MUTATION = 25; // a child's r, g and b = parent's +/- up to this amoun
 
 var SPREAD_RANGE_FACTOR = 0.8; // seeds land up to this x maxSize away from the parent
 var INITIAL_SPREAD_RANGE_FACTOR = 0.6; // same, for the initially planted text (keeps it readable at first)
-var SEEDS_MIN = 0; // number of scattered seeds per grown plant (besides its successor)
+var SEEDS_MIN = 1; // number of scattered seeds per grown plant (besides its successor)
 var SEEDS_MAX = 3;
 var ALWAYS_PLANT_SUCCESSOR = false; // true: a grown plant is always replaced near its spot (keeps the text readable); false: only seeds that find space, so plants can die out
 var SUCCESSOR_DRIFT_FACTOR = 1 / 8; // the successor lands up to this x maxSize away from its parent (ignores the space check)
 var SPACE_OVERLAP_ALLOWANCE = 0.9; // a seed needs distance >= (sum of ground-circle radii) x this; 1 = ground circles may only touch, smaller = more overlap
+var RARE_SPROUT_CHANCE = 1 / 30; // per second, for an extinct lineage (one lineage per letter of the original text)
+var RARE_POPULATION_SCALE = 1.5; // how fast that chance fades with living plants: chance x e^(-count / scale); 1.5 -> 1: 51%, 2: 26%, 5: 4%
 var FRUIT_SATURATION_BOOST = 1.5; // the fruiting outline is the plant's color at full brightness, with saturation multiplied by this
 
 var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to the screen center
@@ -224,7 +226,7 @@ function ensureMinBrightness(col, minBrightness) {
 }
 
 function charPlantFromSerialized(data) {
-    var plant = new CharPlant(data.char, data.x, data.y, data.maxSize, data.baseSize);
+    var plant = new CharPlant(data.char, data.x, data.y, data.maxSize, data.baseSize, undefined, undefined, data.lineage);
     plant.maxSize = data.maxSize;
     plant.size = data.size;
     plant.tilt = data.tilt;
@@ -237,8 +239,9 @@ function charPlantFromSerialized(data) {
 
 class CharPlant {
 
-    constructor(_char, _xPos, _yPos, _maxSize, _baseSize, _parentColor, _parentGrowDuration) {
+    constructor(_char, _xPos, _yPos, _maxSize, _baseSize, _parentColor, _parentGrowDuration, _lineage) {
         this.char = _char;
+        this.lineage = _lineage; // index of the original letter this plant descends from
         this.x = _xPos;
         this.y = _yPos;
         this.baseSize = _baseSize; // the letter's original size, unchanged across generations
@@ -282,6 +285,7 @@ class CharPlant {
             isMaturing: this.isMaturing,
             baseSize: this.baseSize,
             growDuration: this.growDuration,
+            lineage: this.lineage,
             r: red(this.c),
             g: green(this.c),
             b: blue(this.c)
@@ -387,15 +391,23 @@ class CharPlant {
         if (!isOnScreen(pos.x, pos.y, this.maxSize)) {
             pos = { x: this.x, y: this.y }; // don't drift off screen - stay on the parent's spot instead
         }
-        myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.baseSize, this.c, this.growDuration));
+        myGarden.myPlants.push(this.makeChild(pos.x, pos.y));
+    }
+
+    // a new seedling at (x, y), inheriting this plant's genes (with mutation) and lineage
+    makeChild(x, y) {
+        return new CharPlant(this.char, x, y, this.maxSize, this.baseSize, this.c, this.growDuration, this.lineage);
     }
 
     // plants one scattered plant at the full range, only if it's on screen and there's enough space for it
+    // (returns whether it was planted)
     plantSpread(range) {
         var pos = this.randomPositionNear(range);
         if (isOnScreen(pos.x, pos.y, this.maxSize) && myGarden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
-            myGarden.myPlants.push(new CharPlant(this.char, pos.x, pos.y, this.maxSize, this.baseSize, this.c, this.growDuration));
+            myGarden.myPlants.push(this.makeChild(pos.x, pos.y));
+            return true;
         }
+        return false;
     }
 
     plantNewPlants(min, max, range) {
@@ -427,6 +439,7 @@ class CharPlant {
 class Garden {
     constructor() {
         this.myPlants = []; // array of objects
+        this.lineageMemory = []; // per lineage (original letter): its last seen living plant, so an extinct lineage can sprout again there
 
         this.rowPos = 100;
         this.startPos = 100;
@@ -453,7 +466,10 @@ class Garden {
             var data = this.myPlants.map(function (plant) {
                 return plant.serialize();
             });
-            localStorage.setItem(GARDEN_STORAGE_KEY, JSON.stringify({ signature: gardenLineSignature, plants: data }));
+            var memory = this.lineageMemory.map(function (plant) {
+                return plant.serialize();
+            });
+            localStorage.setItem(GARDEN_STORAGE_KEY, JSON.stringify({ signature: gardenLineSignature, plants: data, lineageMemory: memory }));
         } catch (e) {
             // localStorage unavailable (e.g. private browsing) - skip saving
         }
@@ -466,7 +482,9 @@ class Garden {
             var saved = JSON.parse(raw);
             if (!saved || saved.signature !== gardenLineSignature) return false; // different ?line=... params - start fresh
             if (!Array.isArray(saved.plants) || saved.plants.length === 0) return false;
-            this.myPlants = saved.plants.map(charPlantFromSerialized);
+            var plants = saved.plants.map(charPlantFromSerialized);
+            this.lineageMemory = saved.lineageMemory.map(charPlantFromSerialized);
+            this.myPlants = plants;
             return true;
         } catch (e) {
             return false;
@@ -480,6 +498,7 @@ class Garden {
         this.myPlants = this.myPlants.filter(function (plant) {
             return !plant.isDead;
         });
+        this.sproutRare();
         this.myPlants.sort(this.compare);
         for (var i = 0; i < myGarden.myPlants.length; i++) {
             this.myPlants[i].displayGroundFill();
@@ -497,7 +516,45 @@ class Garden {
         var splitString = text.split('');
         for (var i = 0; i < splitString.length; i++) {
             if (splitString[i] === ' ') continue;
-            this.myPlants.push(new CharPlant(splitString[i], xPos + (i * maxCharSize / 2), yPos, maxCharSize, maxCharSize));
+            var plant = new CharPlant(splitString[i], xPos + (i * maxCharSize / 2), yPos, maxCharSize, maxCharSize, undefined, undefined, this.lineageMemory.length);
+            this.myPlants.push(plant);
+            this.lineageMemory.push(plant);
+        }
+    }
+
+    // lineages with few living plants get extra sprouts around their population (the fewer, the likelier);
+    // an extinct lineage sprouts again near its last seen plant
+    sproutRare() {
+        var dt = Math.min(deltaTime / 1000, 0.1); // a backgrounded tab shouldn't cause a burst of sprouts
+        var members = this.lineageMemory.map(function () {
+            return [];
+        });
+        for (var i = 0; i < this.myPlants.length; i++) {
+            var plant = this.myPlants[i];
+            var group = members[plant.lineage];
+            if (!group) continue; // unknown lineage
+            group.push(plant);
+            this.lineageMemory[plant.lineage] = plant;
+        }
+
+        for (var l = 0; l < members.length; l++) {
+            var count = members[l].length;
+            var chance = RARE_SPROUT_CHANCE * Math.exp(-count / RARE_POPULATION_SCALE) * dt;
+            if (random() >= chance) continue;
+            var parent = count > 0 ? random(members[l]) : this.lineageMemory[l];
+            if (parent) {
+                this.sproutNear(parent, count === 0);
+            }
+        }
+    }
+
+    // tries a few spots around the parent; if forced (extinct lineage) and none is free, sprouts on the parent's own spot
+    sproutNear(parent, force) {
+        for (var attempt = 0; attempt < 5; attempt++) {
+            if (parent.plantSpread(parent.spreadRange)) return;
+        }
+        if (force) {
+            this.myPlants.push(parent.makeChild(parent.x, parent.y));
         }
     }
 
