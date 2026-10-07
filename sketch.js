@@ -7,6 +7,7 @@ var toolRadius = 100; // size of the tool circle around the mouse (mouse wheel o
 var TOOL_RADIUS_MIN = 30;
 var TOOL_RADIUS_MAX = 500;
 var touchPinched = false; // true while the current touch involves (or involved) a second finger
+var pinchAnchor = null; // garden position where the tool circle is frozen since the last pinch (null = follows the mouse/finger)
 var toolMode = 'water'; // 'water': hovering boosts growth / 'cut': left click removes plants; right click toggles
 var TOOL_COLORS = { water: [5, 30, 95], cut: [90, 10, 10] };
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
@@ -50,6 +51,9 @@ function ellipticalDist(x1, y1, x2, y2) {
 
 // the garden's origin (0, 0) is the center of the screen, so it stays centered when the window is resized
 function gardenMouse() {
+    if (pinchAnchor) {
+        return pinchAnchor; // the tool circle stays put during/after a pinch
+    }
     return { x: mouseX - width / 2, y: mouseY - height / 2 };
 }
 
@@ -202,10 +206,14 @@ function setupPinch(canvasElement) {
     }
 
     canvasElement.addEventListener('touchstart', function (event) {
-        if (event.touches.length === 2) {
+        if (event.touches.length === 1) {
+            pinchAnchor = null; // a new single touch moves the tool circle again
+        } else if (event.touches.length === 2) {
             startDist = fingerDist(event);
             startRadius = toolRadius;
             touchPinched = true;
+            // freeze the circle at the first finger - otherwise it would jump to whichever finger moved last
+            pinchAnchor = { x: event.touches[0].clientX - width / 2, y: event.touches[0].clientY - height / 2 };
         }
     });
     canvasElement.addEventListener('touchmove', function (event) {
