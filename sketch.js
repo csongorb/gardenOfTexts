@@ -8,6 +8,11 @@ var toolMode = 'water'; // 'water': hovering boosts growth / 'cut': left click r
 var TOOL_COLORS = { water: [5, 30, 95], cut: [90, 10, 10] };
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
 
+var DEFAULT_TEXT_SIZE = 100; // font size for a ?text=... without a size
+var RND_SIZE_MIN = 60; // size "rnd" picks a font size in this range
+var RND_SIZE_MAX = 160;
+var LINE_SPACING = 1.1; // newline: distance between baselines = the line's size x this
+
 var SIZE_MIN_FACTOR = 0.6; // a plant's maxSize stays within [SIZE_MIN_FACTOR, SIZE_MAX_FACTOR] x its letter's original size
 var SIZE_MAX_FACTOR = 1.4;
 var SIZE_MUTATION = 1 / 20; // a child's maxSize = parent's +/- up to this fraction
@@ -32,7 +37,7 @@ var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to
 var GARDEN_SAVE_INTERVAL = 5000; // ms
 var TARGET_FPS = 30; // the garden moves slowly - more frames would mostly cost CPU/GPU
 var MAX_FRAME_TIME = 0.1; // s; longer frames (e.g. after a backgrounded tab) count as this long, so nothing jumps
-var gardenLineSignature = ''; // identifies which ?line=... params the saved garden belongs to
+var gardenLineSignature = ''; // identifies which ?text=... params the saved garden belongs to
 
 function ellipticalDist(x1, y1, x2, y2) {
     var dx = x1 - x2;
@@ -63,7 +68,7 @@ function setup() {
 
     myGarden = new Garden();
 
-    gardenLineSignature = JSON.stringify(new URLSearchParams(window.location.search).getAll('line'));
+    gardenLineSignature = JSON.stringify(new URLSearchParams(window.location.search).getAll('text'));
     if (!myGarden.loadState()) {
         myGarden.plant();
     }
@@ -150,7 +155,7 @@ function keyPressed() {
     }
 
     // 1
-    if (key === '1') {
+    if (key === 'd' || key === 'D') {
         DEBUG = !DEBUG;
     }
 }
@@ -159,37 +164,93 @@ function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
 
-// returns a coordinate relative to the screen center
-// ("center" -> 0, "center+180" -> 180, a plain number is measured from the left/top edge of the current window)
-function resolveCoord(value, screenSize) {
-    var s = String(value).trim();
-    if (s === 'center') {
-        return 0;
-    }
-    // a literal "+" in a URL query value is decoded as a space (e.g. "center+180" arrives as "center 180")
-    var m = s.match(/^center\s*([+-]?\d+(\.\d+)?)$/);
-    if (m) {
-        return Number(m[1]);
-    }
-    return Number(s) - screenSize / 2;
-}
-
+// reads the ?text=text,size,x,y params (size, x and y are optional; leave one empty to skip it, e.g. text=Hello,,,newline)
+// size: number | rnd | empty (DEFAULT_TEXT_SIZE)
+// x, y: offset from the screen center (number) | center | rnd; x empty = previous line's x; y empty or newline = below the previous line
 function getGardenLines() {
-    var rawLines = new URLSearchParams(window.location.search).getAll('line');
+    var rawLines = new URLSearchParams(window.location.search).getAll('text');
     var lines = [];
     for (var i = 0; i < rawLines.length; i++) {
-        var parts = rawLines[i].split(',');
-        lines.push({
-            text: parts[0],
-            x: parts[1] !== undefined ? parts[1] : 'center',
-            y: parts[2] !== undefined ? parts[2] : 'center',
-            size: parts[3] !== undefined ? Number(parts[3]) : 80
+        var parts = rawLines[i].split(',').map(function (part) {
+            return part.trim();
         });
+        var size = parts[1] === 'rnd' ? random(RND_SIZE_MIN, RND_SIZE_MAX) : (Number(parts[1]) || DEFAULT_TEXT_SIZE);
+        lines.push({ text: parts[0], size: size, x: parts[2] || '', y: parts[3] || '' });
     }
     if (lines.length === 0) {
-        lines.push({ text: 'Garden', x: 'center', y: 'center-100', size: 120 });
-        lines.push({ text: 'of', x: 'center', y: 'center', size: 80 });
-        lines.push({ text: 'Texts', x: 'center', y: 'center+100', size: 120 });
+        lines.push({ text: 'Garden', size: 120, x: '', y: '' });
+        lines.push({ text: 'of', size: 80, x: '', y: '' });
+        lines.push({ text: 'Texts', size: 120, x: '', y: '' });
+    }
+    return lines;
+}
+
+// width of a planted line (letters are spaced half their size apart, x is the line's middle)
+function lineWidth(line) {
+    return (line.text.length - 1) * (line.size / 2);
+}
+
+// resolves each line's x (horizontal middle) and y (baseline) to numbers relative to the screen center
+function layoutLines(lines) {
+    var prevX = 0;
+    var prevY = 0;
+    var autoCenter = false; // a first block without a y is centered vertically as a whole
+    var inFirstBlock = true;
+    var firstBlockEnd = 0; // index of the first block's last line
+
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+
+        var x;
+        if (line.x === 'rnd') {
+            var maxX = Math.max(0, width / 2 - lineWidth(line) / 2 - line.size / 2);
+            x = random(-maxX, maxX);
+        } else if (line.x === 'center') {
+            x = 0;
+        } else if (line.x === '') {
+            x = prevX;
+        } else {
+            x = Number(line.x) || 0;
+        }
+
+        var y;
+        var startsBlock = true;
+        if (line.y === 'rnd') {
+            y = random(-height / 2 + line.size, Math.max(-height / 2 + line.size, height / 2 - line.size / 4));
+        } else if (line.y === 'center') {
+            y = 0;
+        } else if (line.y === '' || line.y === 'newline') {
+            if (i === 0) {
+                y = 0;
+                autoCenter = true;
+            } else {
+                y = prevY + line.size * LINE_SPACING;
+                startsBlock = false;
+            }
+        } else {
+            y = Number(line.y) || 0;
+        }
+        if (i > 0 && startsBlock) {
+            inFirstBlock = false;
+        }
+        if (inFirstBlock) {
+            firstBlockEnd = i;
+        }
+
+        line.x = x;
+        line.y = y;
+        prevX = x;
+        prevY = y;
+    }
+
+    if (autoCenter) {
+        var first = lines[0];
+        var last = lines[firstBlockEnd];
+        var top = first.y - first.size * 0.8; // roughly where the first line's letters end at the top
+        var shift = -(top + last.y) / 2;
+        for (var j = 0; j <= firstBlockEnd; j++) {
+            lines[j].y += shift;
+        }
     }
     return lines;
 }
@@ -439,13 +500,10 @@ class Garden {
     }
 
     plant() {
-        var lines = getGardenLines();
+        var lines = layoutLines(getGardenLines());
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i];
-            var lineWidth = (line.text.length - 1) * (line.size / 2);
-            var xPos = resolveCoord(line.x, width) - lineWidth / 2;
-            var yPos = resolveCoord(line.y, height);
-            this.plantTextWithCharPlants(line.text, xPos, yPos, line.size);
+            this.plantTextWithCharPlants(line.text, line.x - lineWidth(line) / 2, line.y, line.size);
         }
 
         for (var i = 0; i < this.myPlants.length; i++) {
@@ -472,7 +530,7 @@ class Garden {
             var raw = localStorage.getItem(GARDEN_STORAGE_KEY);
             if (!raw) return false;
             var saved = JSON.parse(raw);
-            if (!saved || saved.signature !== gardenLineSignature) return false; // different ?line=... params - start fresh
+            if (!saved || saved.signature !== gardenLineSignature) return false; // different ?text=... params - start fresh
             if (!Array.isArray(saved.plants) || saved.plants.length === 0) return false;
             var plants = saved.plants.map(charPlantFromSerialized);
             this.lineageMemory = saved.lineageMemory.map(charPlantFromSerialized);
