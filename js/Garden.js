@@ -7,9 +7,6 @@ class Garden {
         this.myPlants = []; // array of objects
         this.lineageMemory = []; // per lineage (original letter): its last seen living plant, so an extinct lineage can sprout again there
         this.needsSort = true;
-
-        this.rowPos = 100;
-        this.startPos = 100;
     }
 
     plant() {
@@ -64,7 +61,7 @@ class Garden {
     // simulation: advances the garden by dt seconds
     update(dt) {
         for (var i = 0; i < this.myPlants.length; i++) {
-            this.myPlants[i].grow(dt);
+            this.myPlants[i].grow(dt, this);
         }
         this.myPlants = this.myPlants.filter(function (plant) {
             return !plant.isDead;
@@ -91,7 +88,7 @@ class Garden {
 
         if (debugOn) {
             for (var i = 0; i < this.myPlants.length; i++) {
-                if (this.myPlants[i].mouseOver()) {
+                if (this.myPlants[i].mouseOver(10)) {
                     this.myPlants[i].displaySpreadRange();
                 }
             }
@@ -149,7 +146,7 @@ class Garden {
     // tries a few spots around the parent; if forced (extinct lineage) and none is free, sprouts on the parent's own spot
     sproutNear(parent, force) {
         for (var attempt = 0; attempt < 5; attempt++) {
-            if (parent.plantSpread(parent.spreadRange)) return;
+            if (parent.plantSpread(this)) return;
         }
         if (force) {
             this.addPlant(parent.makeChild(parent.x, parent.y));

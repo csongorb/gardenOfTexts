@@ -104,7 +104,8 @@ class CharPlant {
         ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2 * PERSPECTIVE);
     }
 
-    grow(dt) {
+    // advances growth by dt seconds; when fully grown, the plant dies and plants its seeds into the garden
+    grow(dt, garden) {
 
         if (!this.isMaturing) {
             if (this.size / this.maxSize >= MATURING_START) {
@@ -129,7 +130,7 @@ class CharPlant {
 
         if (this.isGrown) {
             this.isDead = true; // set before planting, so the parent's own spot counts as free for its seeds
-            this.plantNewPlants(SEEDS_MIN, SEEDS_MAX, this.spreadRange);
+            this.plantNewPlants(garden);
         }
     }
 
@@ -144,13 +145,13 @@ class CharPlant {
 
     // always plants one successor close to the parent's spot, ignoring the space check,
     // so a replacement keeps the shape readable even if the area is already crowded
-    plantSuccessor(range) {
+    plantSuccessor(garden) {
         var maxRadius = this.maxSize * SUCCESSOR_DRIFT_FACTOR;
         var pos = this.randomPositionNear(maxRadius);
         if (!isOnScreen(pos.x, pos.y, this.maxSize)) {
             pos = { x: this.x, y: this.y }; // don't drift off screen - stay on the parent's spot instead
         }
-        myGarden.addPlant(this.makeChild(pos.x, pos.y));
+        garden.addPlant(this.makeChild(pos.x, pos.y));
     }
 
     // a new seedling at (x, y), inheriting this plant's genes (with mutation) and lineage
@@ -160,23 +161,23 @@ class CharPlant {
 
     // plants one scattered plant at the full range, only if it's on screen and there's enough space for it
     // (returns whether it was planted)
-    plantSpread(range) {
-        var pos = this.randomPositionNear(range);
-        if (isOnScreen(pos.x, pos.y, this.maxSize) && myGarden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
-            myGarden.addPlant(this.makeChild(pos.x, pos.y));
+    plantSpread(garden) {
+        var pos = this.randomPositionNear(this.spreadRange);
+        if (isOnScreen(pos.x, pos.y, this.maxSize) && garden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
+            garden.addPlant(this.makeChild(pos.x, pos.y));
             return true;
         }
         return false;
     }
 
-    plantNewPlants(min, max, range) {
+    plantNewPlants(garden) {
         if (ALWAYS_PLANT_SUCCESSOR) {
-            this.plantSuccessor(range);
+            this.plantSuccessor(garden);
         }
 
-        var spreadCount = random(min, max);
+        var spreadCount = random(SEEDS_MIN, SEEDS_MAX);
         for (var i = 0; i < spreadCount; i++) {
-            this.plantSpread(range);
+            this.plantSpread(garden);
         }
     }
 
@@ -184,7 +185,7 @@ class CharPlant {
         var r = false;
         var mouse = gardenMouse();
         var d = ellipticalDist(mouse.x, mouse.y, this.x, this.y);
-        if (d < (radius || 10)) {
+        if (d < radius) {
             r = true;
         }
         return r;
