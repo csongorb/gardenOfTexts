@@ -47,12 +47,15 @@ function setup() {
 }
 
 function draw() {
+    var dt = Math.min(deltaTime / 1000, MAX_FRAME_TIME); // seconds since the last frame
+    myGarden.update(dt);
+
     background(BACKGROUND_COLOR);
     strokeWeight(2);
 
     push();
     translate(width / 2, height / 2);
-    myGarden.display();
+    myGarden.draw();
     pop();
 
     if (debugOn) {

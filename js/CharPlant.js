@@ -26,8 +26,6 @@ class CharPlant {
         this.size = 1;
         this.tilt = random(-TILT_MAX, TILT_MAX);
         this.setColor(ensureMinBrightness(_parentColor ? varyColor(_parentColor, COLOR_MUTATION) : color(random(0, 255), random(0, 255), random(0, 255)), MIN_BRIGHTNESS));
-        this.fruitStr = this.cStr;
-        this.fruitW = 0.0;
         var duration = _parentGrowDuration || GROW_DURATION_DEFAULT;
         this.growDuration = constrain(duration + random(-duration * GROW_DURATION_MUTATION, duration * GROW_DURATION_MUTATION), GROW_DURATION_MIN, GROW_DURATION_MAX); // seconds to full size
         this.spreadRange = this.maxSize * SPREAD_RANGE_FACTOR;
@@ -79,10 +77,14 @@ class CharPlant {
         ctx.textBaseline = 'alphabetic'; // p5's default BASELINE
         ctx.fillStyle = this.cStr;
         ctx.fillText(this.char, 0, 0);
-        if (this.fruitW > 0) {
-            ctx.lineWidth = this.fruitW;
-            ctx.strokeStyle = this.fruitStr;
-            ctx.strokeText(this.char, 0, 0);
+        if (this.isMaturing) {
+            // fruiting outline: from 0 to FRUIT_OUTLINE_MAX thick, from the plant's color to its intensified version, while maturing
+            var l = 1 - (1 - (this.size / this.maxSize)) / (1 - MATURING_START);
+            if (l > 0) {
+                ctx.lineWidth = lerp(0.0, FRUIT_OUTLINE_MAX, l);
+                ctx.strokeStyle = 'rgb(' + lerp(this.rgb[0], this.fruitRgb[0], l) + ',' + lerp(this.rgb[1], this.fruitRgb[1], l) + ',' + lerp(this.rgb[2], this.fruitRgb[2], l) + ')';
+                ctx.strokeText(this.char, 0, 0);
+            }
         }
         ctx.restore();
     }
@@ -111,12 +113,6 @@ class CharPlant {
         }
 
         if (!this.isGrown) {
-
-            if (this.isMaturing) {
-                var l = 1 - (1 - (this.size / this.maxSize)) / (1 - MATURING_START);
-                this.fruitStr = 'rgb(' + lerp(this.rgb[0], this.fruitRgb[0], l) + ',' + lerp(this.rgb[1], this.fruitRgb[1], l) + ',' + lerp(this.rgb[2], this.fruitRgb[2], l) + ')';
-                this.fruitW = lerp(0.0, FRUIT_OUTLINE_MAX, l);
-            }
 
             var g = dt * (this.maxSize / this.growDuration); // full size after growDuration seconds, regardless of size
 

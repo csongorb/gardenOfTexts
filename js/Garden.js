@@ -61,9 +61,9 @@ class Garden {
         this.needsSort = true;
     }
 
-    display() {
-        var dt = Math.min(deltaTime / 1000, MAX_FRAME_TIME); // seconds since the last frame
-        for (var i = 0; i < myGarden.myPlants.length; i++) {
+    // simulation: advances the garden by dt seconds
+    update(dt) {
+        for (var i = 0; i < this.myPlants.length; i++) {
             this.myPlants[i].grow(dt);
         }
         this.myPlants = this.myPlants.filter(function (plant) {
@@ -74,7 +74,10 @@ class Garden {
             this.myPlants.sort(this.compare);
             this.needsSort = false;
         }
+    }
 
+    // drawing only, nothing changes here (expects the canvas origin at the screen center)
+    draw() {
         // all ground ellipses as one path, filled and outlined with a single call each (much cheaper than one p5 ellipse() per plant)
         var ground = new Path2D();
         for (var i = 0; i < this.myPlants.length; i++) {
