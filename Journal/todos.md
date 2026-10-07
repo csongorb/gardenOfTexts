@@ -9,7 +9,7 @@
 - ~~instructions "send a garden", short description~~
 - ~~credits~~
 - ~~link to instructions, description, credits~~
-- browser icon and tab-name
+- ~~browser icon and tab-name~~
 - color update, somehow making sure that the colors are working together
 - ~~improved parametrisation / writing~~
     - ~~`text,size,x,y` for more intuitive writing~~
