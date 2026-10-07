@@ -3,7 +3,10 @@ var myGarden;
 var mouseOverCanvas = true;
 
 var DEBUG = false;
-var toolRadius = 100; // size of the tool circle around the mouse (mouse wheel changes it)
+var toolRadius = 100; // size of the tool circle around the mouse (mouse wheel or pinch changes it)
+var TOOL_RADIUS_MIN = 30;
+var TOOL_RADIUS_MAX = 500;
+var touchPinched = false; // true while the current touch involves (or involved) a second finger
 var toolMode = 'water'; // 'water': hovering boosts growth / 'cut': left click removes plants; right click toggles
 var TOOL_COLORS = { water: [5, 30, 95], cut: [90, 10, 10] };
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
@@ -86,6 +89,8 @@ function setup() {
     });
     setToolMode(toolMode);
 
+    setupPinch(drawingContext.canvas);
+
     document.addEventListener('mouseleave', function () {
         mouseOverCanvas = false;
     });
@@ -157,18 +162,68 @@ function setToolMode(mode) {
 function mousePressed(event) {
     if (!event || event.target.tagName !== 'CANVAS') return; // clicks on the links shouldn't also act on the garden
 
+    if (event.pointerType === 'touch') return; // touch cuts on release instead, see mouseReleased()
+
     if (event.button === 2) { // right click
         setToolMode(toolMode === 'water' ? 'cut' : 'water');
     } else if (event.button === 0 && toolMode === 'cut') { // left click
-        myGarden.myPlants = myGarden.myPlants.filter(function (plant) {
-            return !plant.mouseOver(toolRadius);
-        });
+        cutAtMouse();
     }
 }
 
+// on touch, a finger going down might be the start of a pinch - so cut only when the finger lifts
+// and no second finger joined in the meantime
+function mouseReleased(event) {
+    if (!event || event.target.tagName !== 'CANVAS') return;
+    if (event.pointerType === 'touch' && toolMode === 'cut' && !touchPinched) {
+        cutAtMouse();
+    }
+}
+
+function cutAtMouse() {
+    myGarden.myPlants = myGarden.myPlants.filter(function (plant) {
+        return !plant.mouseOver(toolRadius);
+    });
+}
+
 function mouseWheel(event) {
-    toolRadius = constrain(toolRadius - event.delta * 0.1, 30, 500);
+    toolRadius = constrain(toolRadius - event.delta * 0.1, TOOL_RADIUS_MIN, TOOL_RADIUS_MAX);
     return false; // prevent the page itself from scrolling
+}
+
+// two-finger pinch on the canvas resizes the tool circle (the mobile version of the mouse wheel)
+function setupPinch(canvasElement) {
+    var startDist = 0; // finger distance when the pinch started, 0 = no pinch
+    var startRadius = 0;
+
+    function fingerDist(event) {
+        var a = event.touches[0], b = event.touches[1];
+        return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+
+    canvasElement.addEventListener('touchstart', function (event) {
+        if (event.touches.length === 2) {
+            startDist = fingerDist(event);
+            startRadius = toolRadius;
+            touchPinched = true;
+        }
+    });
+    canvasElement.addEventListener('touchmove', function (event) {
+        if (event.touches.length === 2 && startDist > 0) {
+            toolRadius = constrain(startRadius * fingerDist(event) / startDist, TOOL_RADIUS_MIN, TOOL_RADIUS_MAX);
+            event.preventDefault(); // no page zoom
+        }
+    }, { passive: false });
+    function onTouchEnd(event) {
+        if (event.touches.length < 2) {
+            startDist = 0;
+        }
+        if (event.touches.length === 0) {
+            touchPinched = false; // all fingers lifted (this runs after the pointer events, so mouseReleased() still sees the pinch)
+        }
+    }
+    canvasElement.addEventListener('touchend', onTouchEnd);
+    canvasElement.addEventListener('touchcancel', onTouchEnd);
 }
 
 function keyPressed() {
