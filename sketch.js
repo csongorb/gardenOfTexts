@@ -78,6 +78,14 @@ function setup() {
         event.preventDefault();
     });
 
+    document.querySelectorAll('#tools [data-mode]').forEach(function (link) {
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            setToolMode(link.dataset.mode);
+        });
+    });
+    setToolMode(toolMode);
+
     document.addEventListener('mouseleave', function () {
         mouseOverCanvas = false;
     });
@@ -131,9 +139,26 @@ function drawDebugInfo() {
     pop();
 }
 
+// a light, still clearly colored version of the tool circle's color, for the active link
+// (same hue at full brightness and saturation, then mixed a bit towards white so it reads on the dark background)
+function lightToolColor(mode) {
+    return 'rgb(' + intensifyColor(TOOL_COLORS[mode]).map(function (v) {
+        return round(lerp(v, 255, 0.35));
+    }).join(',') + ')';
+}
+
+function setToolMode(mode) {
+    toolMode = mode;
+    document.querySelectorAll('#tools [data-mode]').forEach(function (link) {
+        link.style.color = link.dataset.mode === mode ? lightToolColor(mode) : '';
+    });
+}
+
 function mousePressed(event) {
+    if (!event || event.target.tagName !== 'CANVAS') return; // clicks on the links shouldn't also act on the garden
+
     if (event.button === 2) { // right click
-        toolMode = toolMode === 'water' ? 'cut' : 'water';
+        setToolMode(toolMode === 'water' ? 'cut' : 'water');
     } else if (event.button === 0 && toolMode === 'cut') { // left click
         myGarden.myPlants = myGarden.myPlants.filter(function (plant) {
             return !plant.mouseOver(toolRadius);

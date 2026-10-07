@@ -1,12 +1,14 @@
 # Todos
 
 - more mobile friendly
-    - UI with two modes: watering & cutting?
+    - ~~UI with two modes: watering & cutting?~~
+    - ~~switching per right-click OR per buttons~~
     - changing the size of the watering area per pinch
 - ~~when resizing the window: keep text in the middle~~
 - ~~just to be sure: no growth outside the visible area~~
 - instructions "send a garden", short description
-- credits & links
+- credits
+- ~~link to instructions, description, credits~~
 - browser icon and tab-name
 - color update, somehow making sure that the colors are working together
 - ~~improved parametrisation / writing~~
@@ -16,4 +18,4 @@
 - ~~bug / feature: garden seems to prefere smaller plants, as they are currently growing faster~~
     - ~~do I want to keep this? so that player needs to fight against it?~~ no!
     - ~~at least: lets set a min/max size for the plants~~
-- release?
+- release? whats that? at least some posts somewhere?

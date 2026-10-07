@@ -1,0 +1,34 @@
+body {
+	margin: 0;
+	overflow: hidden;
+}
+
+canvas {
+	display: block;
+}
+
+/* the two links at the bottom */
+.ui {
+	position: fixed;
+	bottom: 4px;
+	font: 18px sans-serif;
+	color: #bbb;
+	user-select: none;
+}
+
+.left {
+	left: 12px;
+}
+
+.right {
+	right: 4px;
+	color: #fff;
+	text-decoration: none;
+}
+
+/* padding = bigger tap area on mobile */
+.ui span, .right {
+	display: inline-block;
+	padding: 12px 4px;
+	cursor: pointer;
+}
