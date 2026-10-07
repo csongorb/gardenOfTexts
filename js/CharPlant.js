@@ -24,14 +24,13 @@ class CharPlant {
         this.baseSize = _baseSize; // the letter's original size, unchanged across generations
         this.maxSize = constrain(_maxSize + random(-_maxSize * SIZE_MUTATION, _maxSize * SIZE_MUTATION), _baseSize * SIZE_MIN_FACTOR, _baseSize * SIZE_MAX_FACTOR);
         this.size = 1;
-        this.tilt = random(-8, 8);
-        this.setColor(ensureMinBrightness(_parentColor ? varyColor(_parentColor, COLOR_MUTATION) : color(random(0, 255), random(0, 255), random(0, 255)), 75));
+        this.tilt = random(-TILT_MAX, TILT_MAX);
+        this.setColor(ensureMinBrightness(_parentColor ? varyColor(_parentColor, COLOR_MUTATION) : color(random(0, 255), random(0, 255), random(0, 255)), MIN_BRIGHTNESS));
         this.fruitStr = this.cStr;
         this.fruitW = 0.0;
         var duration = _parentGrowDuration || GROW_DURATION_DEFAULT;
         this.growDuration = constrain(duration + random(-duration * GROW_DURATION_MUTATION, duration * GROW_DURATION_MUTATION), GROW_DURATION_MIN, GROW_DURATION_MAX); // seconds to full size
         this.spreadRange = this.maxSize * SPREAD_RANGE_FACTOR;
-        this.startMaturingAt = 0.8;
         this.isGrown = false;
         this.isMaturing = false;
         this.isDead = false;
@@ -106,7 +105,7 @@ class CharPlant {
     grow(dt) {
 
         if (!this.isMaturing) {
-            if (this.size / this.maxSize >= this.startMaturingAt) {
+            if (this.size / this.maxSize >= MATURING_START) {
                 this.isMaturing = true;
             }
         }
@@ -114,15 +113,15 @@ class CharPlant {
         if (!this.isGrown) {
 
             if (this.isMaturing) {
-                var l = 1 - (1 - (this.size / this.maxSize)) / (1 - this.startMaturingAt);
+                var l = 1 - (1 - (this.size / this.maxSize)) / (1 - MATURING_START);
                 this.fruitStr = 'rgb(' + lerp(this.rgb[0], this.fruitRgb[0], l) + ',' + lerp(this.rgb[1], this.fruitRgb[1], l) + ',' + lerp(this.rgb[2], this.fruitRgb[2], l) + ')';
-                this.fruitW = lerp(0.0, 5.0, l);
+                this.fruitW = lerp(0.0, FRUIT_OUTLINE_MAX, l);
             }
 
             var g = dt * (this.maxSize / this.growDuration); // full size after growDuration seconds, regardless of size
 
-            if ((toolMode === 'water' && mouseOverCanvas && this.mouseOver(toolRadius)) || (DEBUG && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
-                g = g * 20;
+            if ((toolMode === 'water' && mouseOverCanvas && this.mouseOver(toolRadius)) || (debugOn && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
+                g = g * WATER_BOOST;
             }
 
             this.size = this.size + g;

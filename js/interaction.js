@@ -1,3 +1,9 @@
+var toolMode = 'water'; // 'water': hovering boosts growth / 'cut': left click removes plants; right click toggles
+var toolRadius = TOOL_RADIUS_DEFAULT; // mouse wheel or pinch changes it
+var mouseOverCanvas = true;
+var touchPinched = false; // true while the current touch involves (or involved) a second finger
+var pinchAnchor = null; // garden position where the tool circle is frozen since the last pinch (null = follows the mouse/finger)
+
 // the garden's origin (0, 0) is the center of the screen, so it stays centered when the window is resized
 function gardenMouse() {
     if (pinchAnchor) {

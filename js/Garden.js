@@ -82,11 +82,11 @@ class Garden {
         }
         var ctx = drawingContext;
         ctx.save();
-        ctx.fillStyle = 'rgb(40,40,40)';
+        ctx.fillStyle = 'rgb(' + GROUND_FILL + ',' + GROUND_FILL + ',' + GROUND_FILL + ')';
         ctx.fill(ground);
         ctx.restore();
 
-        if (DEBUG) {
+        if (debugOn) {
             for (var i = 0; i < this.myPlants.length; i++) {
                 if (this.myPlants[i].mouseOver()) {
                     this.myPlants[i].displaySpreadRange();
@@ -98,7 +98,7 @@ class Garden {
 
         // outlines are drawn after the tool circle, so they stay visible even where the tool circle covers them
         ctx.save();
-        ctx.strokeStyle = 'rgb(80,80,80)';
+        ctx.strokeStyle = 'rgb(' + GROUND_OUTLINE + ',' + GROUND_OUTLINE + ',' + GROUND_OUTLINE + ')';
         ctx.lineWidth = 1.5;
         ctx.stroke(ground);
         ctx.restore();

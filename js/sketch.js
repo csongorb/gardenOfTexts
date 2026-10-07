@@ -1,3 +1,7 @@
+var myGarden;
+var gardenLineSignature = ''; // identifies which ?text=... params the saved garden belongs to
+var debugOn = false; // toggled with "D"
+
 function setup() {
     createCanvas(windowWidth, windowHeight);
     pixelDensity(1); // on HiDPI/Retina screens p5 would otherwise draw 4x as many pixels
@@ -43,7 +47,7 @@ function setup() {
 }
 
 function draw() {
-    background(20);
+    background(BACKGROUND_COLOR);
     strokeWeight(2);
 
     push();
@@ -51,7 +55,7 @@ function draw() {
     myGarden.display();
     pop();
 
-    if (DEBUG) {
+    if (debugOn) {
         drawDebugInfo();
     }
 }
@@ -80,7 +84,7 @@ function keyPressed() {
 
     // D
     if (key === 'd' || key === 'D') {
-        DEBUG = !DEBUG;
+        debugOn = !debugOn;
     }
 }
 
