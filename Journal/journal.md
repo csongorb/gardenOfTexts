@@ -1,5 +1,11 @@
 # Process Journal
 
+## 2026-10-08: Let me free!
+
+I need to free myself from this project for a few days, so I will only update the todos for a while. Too much other things to do...
+
+Why have I written "...is a thing" so many times before?
+
 ## 2026-10-07: Who has the fun?
 
 Yes, AI-shame is a thing. But also: I have learnt a lot. I mean: I have to understand it more in-depth in order to teach it to students. Aaand it was also: fun and strangely effective.
@@ -17,7 +23,7 @@ Ah, should have searched for this sooner. AI-shame is a thing.
 ## 2026-10-06: Connections
 
 I have just realised that this also has a lot of similarities with my recent ideas for [Growth Capsule](https://github.com/csongorb/growthcapsule) (unfortunately, still not realised there, not even in the [Journal](https://github.com/csongorb/growthcapsule/blob/main/journal/journal.md)):  
-Giving someone a flower that will die one day, but can forwarded it in time to keep it longer.
+Giving someone a flower that will die one day, but can be forwarded in time to keep it longer.
 
 Also, just a comment, this shame-thing seems to be *in der Luft*:  
 https://bsky.app/profile/sh.itch.io/post/3mx5gkcit322d
