@@ -1,5 +1,17 @@
 # Process Journal
 
+## 2026-10-14: OLKCH & Areas
+
+This is just so awesome, why have I not known this until now? Yes, RGB-colors are really difficult to work with algorithmically, this seems to be much more closed to a humanly understandable / managable idea. Closer to humans.  
+I new interface for colors. Let see, I will work this into the project... one day.
+
+- https://en.wikipedia.org/wiki/Oklab_color_space
+- https://oklch.fyi/
+- https://oklch.com/
+
+To keep readability, I could try making the plants that form a row more saturated a/o brighter, and the others less so.  
+I will need to check the areas where a certain character-plants are growing and adjust them based on how much they overlap and how well they keep the line.
+
 ## 2026-10-08: Let me free!
 
 I need to free myself from this project for a few days, so I will only update the todos for a while. Too much other things to do...
