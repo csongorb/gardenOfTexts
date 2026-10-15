@@ -82,7 +82,7 @@ class Garden {
         }
         var ctx = drawingContext;
         ctx.save();
-        ctx.fillStyle = 'rgb(' + GROUND_FILL + ',' + GROUND_FILL + ',' + GROUND_FILL + ')';
+        ctx.fillStyle = GROUND_FILL;
         ctx.fill(ground);
         ctx.restore();
 
@@ -98,7 +98,7 @@ class Garden {
 
         // outlines are drawn after the tool circle, so they stay visible even where the tool circle covers them
         ctx.save();
-        ctx.strokeStyle = 'rgb(' + GROUND_OUTLINE + ',' + GROUND_OUTLINE + ',' + GROUND_OUTLINE + ')';
+        ctx.strokeStyle = GROUND_OUTLINE;
         ctx.lineWidth = 1.5;
         ctx.stroke(ground);
         ctx.restore();

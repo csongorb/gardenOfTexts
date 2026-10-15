@@ -8,6 +8,7 @@ function setup() {
     frameRate(TARGET_FPS);
 
     angleMode(DEGREES);
+    colorMode(OKLCH);
 
     myGarden = new Garden();
 
@@ -66,7 +67,7 @@ function draw() {
 function drawDebugInfo() {
     push();
     noStroke();
-    fill(220);
+    fill('oklch(0.89 0 0)');
     textSize(16);
     textAlign(LEFT, TOP);
     text('plants: ' + myGarden.myPlants.length, 10, 10);

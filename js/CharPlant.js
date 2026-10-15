@@ -10,13 +10,13 @@ function charPlantFromSerialized(data) {
     plant.spreadRange = data.spreadRange;
     plant.isMaturing = data.isMaturing;
     plant.growDuration = data.growDuration;
-    plant.setColor(color(data.r, data.g, data.b));
+    plant.setHue(data.h);
     return plant;
 }
 
 class CharPlant {
 
-    constructor(_char, _xPos, _yPos, _maxSize, _baseSize, _parentColor, _parentGrowDuration, _lineage) {
+    constructor(_char, _xPos, _yPos, _maxSize, _baseSize, _parentHue, _parentGrowDuration, _lineage) {
         this.char = _char;
         this.lineage = _lineage; // index of the original letter this plant descends from
         this.x = _xPos;
@@ -25,7 +25,7 @@ class CharPlant {
         this.maxSize = constrain(_maxSize + random(-_maxSize * SIZE_MUTATION, _maxSize * SIZE_MUTATION), _baseSize * SIZE_MIN_FACTOR, _baseSize * SIZE_MAX_FACTOR);
         this.size = 1;
         this.tilt = random(-TILT_MAX, TILT_MAX);
-        this.setColor(ensureMinBrightness(_parentColor ? varyColor(_parentColor, COLOR_MUTATION) : color(random(0, 255), random(0, 255), random(0, 255)), MIN_BRIGHTNESS));
+        this.setHue(_parentHue !== undefined ? (_parentHue + random(-HUE_MUTATION, HUE_MUTATION) + 360) % 360 : random(0, 360));
         var duration = _parentGrowDuration || GROW_DURATION_DEFAULT;
         this.growDuration = constrain(duration + random(-duration * GROW_DURATION_MUTATION, duration * GROW_DURATION_MUTATION), GROW_DURATION_MIN, GROW_DURATION_MAX); // seconds to full size
         this.spreadRange = this.maxSize * SPREAD_RANGE_FACTOR;
@@ -34,12 +34,10 @@ class CharPlant {
         this.isDead = false;
     }
 
-    // caches the color as plain numbers and a CSS string, so drawing doesn't need p5.Color conversions every frame
-    setColor(col) {
-        this.c = col;
-        this.rgb = [red(col), green(col), blue(col)];
-        this.cStr = 'rgb(' + this.rgb[0] + ',' + this.rgb[1] + ',' + this.rgb[2] + ')';
-        this.fruitRgb = intensifyColor(this.rgb);
+    // caches the color as a CSS string, so drawing doesn't need to build it every frame
+    setHue(h) {
+        this.hue = h;
+        this.cStr = 'oklch(' + PLANT_LIGHTNESS + ' ' + PLANT_CHROMA + ' ' + h + ')';
     }
 
     preGrow() {
@@ -60,9 +58,7 @@ class CharPlant {
             baseSize: this.baseSize,
             growDuration: this.growDuration,
             lineage: this.lineage,
-            r: red(this.c),
-            g: green(this.c),
-            b: blue(this.c)
+            h: this.hue
         };
     }
 
@@ -78,11 +74,11 @@ class CharPlant {
         ctx.fillStyle = this.cStr;
         ctx.fillText(this.char, 0, 0);
         if (this.isMaturing) {
-            // fruiting outline: from 0 to FRUIT_OUTLINE_MAX thick, from the plant's color to its intensified version, while maturing
+            // fruiting outline: from 0 to FRUIT_OUTLINE_MAX thick, from the plant's lightness/chroma to the fruit's, while maturing
             var l = 1 - (1 - (this.size / this.maxSize)) / (1 - MATURING_START);
             if (l > 0) {
                 ctx.lineWidth = lerp(0.0, FRUIT_OUTLINE_MAX, l);
-                ctx.strokeStyle = 'rgb(' + lerp(this.rgb[0], this.fruitRgb[0], l) + ',' + lerp(this.rgb[1], this.fruitRgb[1], l) + ',' + lerp(this.rgb[2], this.fruitRgb[2], l) + ')';
+                ctx.strokeStyle = 'oklch(' + lerp(PLANT_LIGHTNESS, FRUIT_LIGHTNESS, l) + ' ' + lerp(PLANT_CHROMA, FRUIT_CHROMA, l) + ' ' + this.hue + ')';
                 ctx.strokeText(this.char, 0, 0);
             }
         }
@@ -98,7 +94,7 @@ class CharPlant {
 
     displaySpreadRange() {
         noFill();
-        stroke(255, 80, 80);
+        stroke('oklch(0.68 0.21 25)');
         strokeWeight(1);
         ellipseMode(CENTER);
         ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2 * PERSPECTIVE);
@@ -156,7 +152,7 @@ class CharPlant {
 
     // a new seedling at (x, y), inheriting this plant's genes (with mutation) and lineage
     makeChild(x, y) {
-        return new CharPlant(this.char, x, y, this.maxSize, this.baseSize, this.c, this.growDuration, this.lineage);
+        return new CharPlant(this.char, x, y, this.maxSize, this.baseSize, this.hue, this.growDuration, this.lineage);
     }
 
     // plants one scattered plant at the full range, only if it's on screen and there's enough space for it

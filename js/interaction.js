@@ -15,7 +15,7 @@ function gardenMouse() {
 function drawToolCircle() {
     if (mouseOverCanvas) {
         noStroke();
-        fill(TOOL_COLORS[toolMode]);
+        fill('oklch(' + TOOL_COLORS[toolMode].join(' ') + ')');
         ellipseMode(CENTER);
         var mouse = gardenMouse();
         ellipse(mouse.x, mouse.y, toolRadius * 2, toolRadius * 2 * PERSPECTIVE);
@@ -23,11 +23,10 @@ function drawToolCircle() {
 }
 
 // a light, still clearly colored version of the tool circle's color, for the active link
-// (same hue at full brightness and saturation, then mixed a bit towards white so it reads on the dark background)
+// (same hue and chroma, but light enough to read on the dark background)
 function lightToolColor(mode) {
-    return 'rgb(' + intensifyColor(TOOL_COLORS[mode]).map(function (v) {
-        return round(lerp(v, 255, 0.35));
-    }).join(',') + ')';
+    var c = TOOL_COLORS[mode];
+    return 'oklch(0.8 ' + c[1] + ' ' + c[2] + ')';
 }
 
 function setToolMode(mode) {

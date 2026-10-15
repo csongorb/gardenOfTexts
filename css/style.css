@@ -13,7 +13,7 @@ canvas {
 	position: fixed;
 	bottom: 4px;
 	font: 18px sans-serif;
-	color: #bbb;
+	color: oklch(0.79 0 0);
 	user-select: none;
 }
 
@@ -23,7 +23,7 @@ canvas {
 
 .right {
 	right: 4px;
-	color: #fff;
+	color: oklch(1 0 0);
 	text-decoration: none;
 }
 
