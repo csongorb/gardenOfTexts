@@ -27,6 +27,20 @@ canvas {
 	text-decoration: none;
 }
 
+/* debug panel (toggled with "D"; font size comes from DEBUG_TEXT_SIZE) */
+#debug {
+	display: none;
+	position: fixed;
+	top: 10px;
+	left: 10px;
+	font-family: sans-serif;
+	color: oklch(0.89 0 0);
+}
+
+body.debug #debug {
+	display: block;
+}
+
 /* padding = bigger tap area on mobile */
 .ui span, .right {
 	display: inline-block;

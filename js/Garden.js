@@ -92,28 +92,34 @@ class Garden {
 
     // drawing only, nothing changes here (expects the canvas origin at the screen center)
     draw() {
-        // all ground ellipses as one path, filled and outlined with a single call each (much cheaper than one p5 ellipse() per plant)
-        var ground = new Path2D();
-        for (var i = 0; i < this.myPlants.length; i++) {
-            this.myPlants[i].addGroundToPath(ground);
-        }
         var ctx = drawingContext;
-        ctx.save();
-        ctx.fillStyle = GROUND_FILL;
-        ctx.fill(ground);
-        ctx.restore();
+        var showBases = showLayer('bases');
+
+        // all ground ellipses as one path, filled and outlined with a single call each (much cheaper than one p5 ellipse() per plant)
+        if (showBases) {
+            var ground = new Path2D();
+            for (var i = 0; i < this.myPlants.length; i++) {
+                this.myPlants[i].addGroundToPath(ground);
+            }
+            ctx.save();
+            ctx.fillStyle = GROUND_FILL;
+            ctx.fill(ground);
+            ctx.restore();
+        }
 
         drawToolCircle();
 
         // outlines are drawn after the tool circle, so they stay visible even where the tool circle covers them
-        ctx.save();
-        ctx.strokeStyle = GROUND_OUTLINE;
-        ctx.lineWidth = 1.5;
-        ctx.stroke(ground);
-        ctx.restore();
+        if (showBases) {
+            ctx.save();
+            ctx.strokeStyle = GROUND_OUTLINE;
+            ctx.lineWidth = 1.5;
+            ctx.stroke(ground);
+            ctx.restore();
+        }
 
         // after the tool circle, which would otherwise cover it
-        if (debugOn) {
+        if (debugOn && debugLayers.spreadRange) {
             for (var i = 0; i < this.myPlants.length; i++) {
                 if (this.myPlants[i].mouseOver(10)) {
                     this.myPlants[i].displaySpreadRange();
@@ -121,13 +127,13 @@ class Garden {
             }
         }
 
-        if (!debugOn || debugShowPlants) {
+        if (showLayer('plants')) {
             for (var i = 0; i < this.myPlants.length; i++) {
                 this.myPlants[i].displayPlants();
             }
         }
 
-        if (debugOn) {
+        if (debugOn && debugLayers.origins) {
             this.displayLineageOrigins();
         }
     }

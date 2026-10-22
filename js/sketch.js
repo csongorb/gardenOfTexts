@@ -1,7 +1,13 @@
 var myGarden;
 var gardenLineSignature = ''; // identifies which ?text=... params the saved garden belongs to
 var debugOn = false; // toggled with "D"
-var debugShowPlants = true; // in debug, toggled with "P"
+var debugLayers = Object.assign({}, DEBUG_LAYERS_DEFAULT); // in debug, toggled with the panel's checkboxes
+var debugStatsTime = 0; // ms; last update of the panel's stats
+
+// plants and bases always show outside debug; in debug, only if their checkbox is on
+function showLayer(name) {
+    return !debugOn || debugLayers[name];
+}
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -30,6 +36,14 @@ function setup() {
         });
     });
     setToolMode(toolMode);
+
+    document.getElementById('debug').style.fontSize = DEBUG_TEXT_SIZE + 'px';
+    document.querySelectorAll('#debug [data-layer]').forEach(function (checkbox) {
+        checkbox.checked = debugLayers[checkbox.dataset.layer];
+        checkbox.addEventListener('change', function () {
+            debugLayers[checkbox.dataset.layer] = checkbox.checked;
+        });
+    });
 
     setupPinch(drawingContext.canvas);
 
@@ -61,31 +75,19 @@ function draw() {
     pop();
 
     if (debugOn) {
-        drawDebugInfo();
+        updateDebugStats();
     }
 }
 
-function drawDebugInfo() {
-    push();
-    noStroke();
-    fill('oklch(0.89 0 0)');
-    textSize(DEBUG_TEXT_SIZE);
-    textAlign(LEFT, TOP);
+// a few times per second only - otherwise the fps number flickers
+function updateDebugStats() {
+    if (millis() - debugStatsTime < 250) return;
+    debugStatsTime = millis();
     var lines = ['plants: ' + myGarden.myPlants.length, 'fps: ' + round(frameRate())];
     if (window.performance && performance.memory) { // Chrome only
         lines.push('memory: ' + round(performance.memory.usedJSHeapSize / 1048576) + ' MB');
     }
-    lines.push(
-        '',
-        'D: debug off',
-        'P: plants ' + (debugShowPlants ? 'off' : 'on'),
-        'hold G: faster growth',
-        'hover a plant: spread range'
-    );
-    for (var i = 0; i < lines.length; i++) {
-        text(lines[i], 10, 10 + i * DEBUG_TEXT_SIZE * DEBUG_LINE_SPACING);
-    }
-    pop();
+    document.getElementById('debug-stats').innerHTML = lines.join('<br>');
 }
 
 function keyPressed() {
@@ -99,11 +101,8 @@ function keyPressed() {
     // D
     if (key === 'd' || key === 'D') {
         debugOn = !debugOn;
-    }
-
-    // P (debug only)
-    if (debugOn && (key === 'p' || key === 'P')) {
-        debugShowPlants = !debugShowPlants;
+        document.body.classList.toggle('debug', debugOn);
+        debugStatsTime = 0; // show fresh stats right away
     }
 }
 
