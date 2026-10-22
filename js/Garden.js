@@ -133,31 +133,59 @@ class Garden {
             }
         }
 
+        if (debugOn && debugLayers.areas) {
+            this.displayLineageAreas();
+        }
+
         if (debugOn && debugLayers.origins) {
             this.displayLineageOrigins();
         }
     }
 
-    // debug: each lineage's original letter as an outline on its original spot, with a cross at the spot and its number of living plants
-    displayLineageOrigins() {
+    // debug: the area each lineage occupies, as the outline around its living plants, in the lineage's hue
+    displayLineageAreas() {
         push();
-        stroke(DEBUG_COLOR);
+        noFill();
         strokeWeight(1);
-        textAlign(CENTER, BASELINE); // same as the plants
         for (var i = 0; i < this.lineages.length; i++) {
             var lineage = this.lineages[i];
+            if (lineage.isExtinct()) continue;
+            stroke(lineage.color());
+            var hull = lineage.hull();
+            beginShape();
+            for (var j = 0; j < hull.length; j++) {
+                vertex(hull[j].x, hull[j].y);
+            }
+            endShape(CLOSE);
+        }
+        pop();
+    }
+
+    // debug: each lineage's original letter as an outline on its original spot, with a cross at the spot and its number of living plants
+    // (in the lineage's hue, like its area)
+    displayLineageOrigins() {
+        push();
+        strokeWeight(1);
+        for (var i = 0; i < this.lineages.length; i++) {
+            var lineage = this.lineages[i];
+            var c = lineage.color();
+            stroke(c);
             noFill();
+            textAlign(CENTER, BASELINE); // same as the plants
             textSize(lineage.baseSize * DEBUG_ORIGIN_SIZE_FACTOR);
             text(lineage.char, lineage.originX, lineage.originY);
             line(lineage.originX - 4, lineage.originY - 4, lineage.originX + 4, lineage.originY + 4);
             line(lineage.originX - 4, lineage.originY + 4, lineage.originX + 4, lineage.originY - 4);
-        }
-        noStroke();
-        fill(DEBUG_COLOR);
-        textSize(DEBUG_COUNT_TEXT_SIZE);
-        textAlign(LEFT, TOP);
-        for (var i = 0; i < this.lineages.length; i++) {
-            text(this.lineages[i].count, this.lineages[i].originX + 5, this.lineages[i].originY + 2);
+
+            var label = lineage.count;
+            if (debugLayers.areas) {
+                label += ' / ' + round(lineage.area() / 1000) + 'k px²';
+            }
+            noStroke();
+            fill(c);
+            textAlign(LEFT, TOP);
+            textSize(DEBUG_COUNT_TEXT_SIZE);
+            text(label, lineage.originX + 5, lineage.originY + 2);
         }
         pop();
     }

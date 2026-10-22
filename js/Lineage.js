@@ -47,6 +47,51 @@ class Lineage {
         }
     }
 
+    // debug color: the hue of its last seen plant (also after extinction), like the plants themselves
+    color() {
+        if (!this.lastSeen) return DEBUG_COLOR;
+        return 'oklch(' + PLANT_LIGHTNESS + ' ' + PLANT_CHROMA + ' ' + this.lastSeen.hue + ')';
+    }
+
+    // convex hull around the living plants' positions (monotone chain); fewer than 3 plants: just their positions
+    hull() {
+        var points = this.members.map(function (plant) {
+            return { x: plant.x, y: plant.y };
+        });
+        if (points.length < 3) return points;
+        points.sort(function (a, b) {
+            return a.x - b.x || a.y - b.y;
+        });
+        function cross(o, a, b) {
+            return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+        }
+        var lower = [];
+        for (var i = 0; i < points.length; i++) {
+            while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], points[i]) <= 0) lower.pop();
+            lower.push(points[i]);
+        }
+        var upper = [];
+        for (var i = points.length - 1; i >= 0; i--) {
+            while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], points[i]) <= 0) upper.pop();
+            upper.push(points[i]);
+        }
+        lower.pop(); // the last point of each chain is the first of the other
+        upper.pop();
+        return lower.concat(upper);
+    }
+
+    // area of the hull in px² on the ground (the screen squashes y by PERSPECTIVE, so that's undone here)
+    area(hull) {
+        hull = hull || this.hull();
+        var sum = 0;
+        for (var i = 0; i < hull.length; i++) {
+            var a = hull[i];
+            var b = hull[(i + 1) % hull.length];
+            sum += a.x * b.y - b.x * a.y;
+        }
+        return Math.abs(sum) / 2 / PERSPECTIVE;
+    }
+
     get count() {
         return this.members.length;
     }
