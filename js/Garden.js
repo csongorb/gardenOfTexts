@@ -5,7 +5,7 @@
 class Garden {
     constructor() {
         this.myPlants = []; // array of objects
-        this.lineageMemory = []; // per lineage (original letter): its last seen living plant, so an extinct lineage can sprout again there
+        this.lineages = []; // one Lineage per letter of the original text (indexed by plant.lineage)
         this.needsSort = true;
     }
 
@@ -26,10 +26,10 @@ class Garden {
             var data = this.myPlants.map(function (plant) {
                 return plant.serialize();
             });
-            var memory = this.lineageMemory.map(function (plant) {
-                return plant.serialize();
+            var lineages = this.lineages.map(function (lineage) {
+                return lineage.serialize();
             });
-            localStorage.setItem(GARDEN_STORAGE_KEY, JSON.stringify({ signature: gardenLineSignature, plants: data, lineageMemory: memory }));
+            localStorage.setItem(GARDEN_STORAGE_KEY, JSON.stringify({ signature: gardenLineSignature, plants: data, lineages: lineages }));
         } catch (e) {
             // localStorage unavailable (e.g. private browsing) - skip saving
         }
@@ -42,10 +42,13 @@ class Garden {
             var saved = JSON.parse(raw);
             if (!saved || saved.signature !== gardenLineSignature) return false; // different ?text=... params - start fresh
             if (!Array.isArray(saved.plants) || saved.plants.length === 0) return false;
+            if (!Array.isArray(saved.lineages)) return false; // saved before lineages existed - start fresh
             var plants = saved.plants.map(charPlantFromSerialized);
-            this.lineageMemory = saved.lineageMemory.map(charPlantFromSerialized);
-            this.myPlants = plants;
-            this.needsSort = true;
+            this.lineages = saved.lineages.map(Lineage.fromSerialized);
+            this.myPlants = [];
+            for (var i = 0; i < plants.length; i++) {
+                this.addPlant(plants[i]); // refills the lineages' members
+            }
             return true;
         } catch (e) {
             return false;
@@ -55,7 +58,23 @@ class Garden {
     // new plants go through here, so the draw order is only re-sorted when something was added
     addPlant(plant) {
         this.myPlants.push(plant);
+        var lineage = this.lineages[plant.lineage];
+        if (lineage) {
+            lineage.add(plant);
+        }
         this.needsSort = true;
+    }
+
+    // removes all plants marked isDead, from the garden and from their lineages
+    removeDead() {
+        var before = this.myPlants.length;
+        this.myPlants = this.myPlants.filter(function (plant) {
+            return !plant.isDead;
+        });
+        if (this.myPlants.length === before) return;
+        for (var i = 0; i < this.lineages.length; i++) {
+            this.lineages[i].prune();
+        }
     }
 
     // simulation: advances the garden by dt seconds
@@ -63,9 +82,7 @@ class Garden {
         for (var i = 0; i < this.myPlants.length; i++) {
             this.myPlants[i].grow(dt, this);
         }
-        this.myPlants = this.myPlants.filter(function (plant) {
-            return !plant.isDead;
-        });
+        this.removeDead();
         this.sproutRare(dt);
         if (this.needsSort) { // removing plants keeps the order, only additions need a sort
             this.myPlants.sort(this.compare);
@@ -86,14 +103,6 @@ class Garden {
         ctx.fill(ground);
         ctx.restore();
 
-        if (debugOn) {
-            for (var i = 0; i < this.myPlants.length; i++) {
-                if (this.myPlants[i].mouseOver(10)) {
-                    this.myPlants[i].displaySpreadRange();
-                }
-            }
-        }
-
         drawToolCircle();
 
         // outlines are drawn after the tool circle, so they stay visible even where the tool circle covers them
@@ -103,40 +112,70 @@ class Garden {
         ctx.stroke(ground);
         ctx.restore();
 
-        for (var i = 0; i < this.myPlants.length; i++) {
-            this.myPlants[i].displayPlants();
+        // after the tool circle, which would otherwise cover it
+        if (debugOn) {
+            for (var i = 0; i < this.myPlants.length; i++) {
+                if (this.myPlants[i].mouseOver(10)) {
+                    this.myPlants[i].displaySpreadRange();
+                }
+            }
         }
+
+        if (!debugOn || debugShowPlants) {
+            for (var i = 0; i < this.myPlants.length; i++) {
+                this.myPlants[i].displayPlants();
+            }
+        }
+
+        if (debugOn) {
+            this.displayLineageOrigins();
+        }
+    }
+
+    // debug: each lineage's original letter as an outline on its original spot, with a cross at the spot and its number of living plants
+    displayLineageOrigins() {
+        push();
+        stroke(DEBUG_COLOR);
+        strokeWeight(1);
+        textAlign(CENTER, BASELINE); // same as the plants
+        for (var i = 0; i < this.lineages.length; i++) {
+            var lineage = this.lineages[i];
+            noFill();
+            textSize(lineage.baseSize * DEBUG_ORIGIN_SIZE_FACTOR);
+            text(lineage.char, lineage.originX, lineage.originY);
+            line(lineage.originX - 4, lineage.originY - 4, lineage.originX + 4, lineage.originY + 4);
+            line(lineage.originX - 4, lineage.originY + 4, lineage.originX + 4, lineage.originY - 4);
+        }
+        noStroke();
+        fill(DEBUG_COLOR);
+        textSize(DEBUG_COUNT_TEXT_SIZE);
+        textAlign(LEFT, TOP);
+        for (var i = 0; i < this.lineages.length; i++) {
+            text(this.lineages[i].count, this.lineages[i].originX + 5, this.lineages[i].originY + 2);
+        }
+        pop();
     }
 
     plantTextWithCharPlants(text, xPos, yPos, maxCharSize) {
         var splitString = text.split('');
         for (var i = 0; i < splitString.length; i++) {
             if (splitString[i] === ' ') continue;
-            var plant = new CharPlant(splitString[i], xPos + (i * maxCharSize / 2), yPos, maxCharSize, maxCharSize, undefined, undefined, this.lineageMemory.length);
-            this.addPlant(plant);
-            this.lineageMemory.push(plant);
+            var x = xPos + (i * maxCharSize / 2);
+            var lineage = new Lineage(this.lineages.length, splitString[i], x, yPos, maxCharSize);
+            this.lineages.push(lineage);
+            this.addPlant(new CharPlant(splitString[i], x, yPos, maxCharSize, maxCharSize, undefined, undefined, lineage.id));
         }
     }
 
     // lineages with few living plants get extra sprouts around their population (the fewer, the likelier);
     // an extinct lineage sprouts again near its last seen plant
     sproutRare(dt) {
-        var members = this.lineageMemory.map(function () {
-            return [];
-        });
-        for (var i = 0; i < this.myPlants.length; i++) {
-            var plant = this.myPlants[i];
-            var group = members[plant.lineage];
-            if (!group) continue; // unknown lineage
-            group.push(plant);
-            this.lineageMemory[plant.lineage] = plant;
-        }
-
-        for (var l = 0; l < members.length; l++) {
-            var count = members[l].length;
+        for (var l = 0; l < this.lineages.length; l++) {
+            var lineage = this.lineages[l];
+            var count = lineage.count;
             var chance = RARE_SPROUT_CHANCE * Math.exp(-count / RARE_POPULATION_SCALE) * dt;
             if (random() >= chance) continue;
-            var parent = count > 0 ? random(members[l]) : this.lineageMemory[l];
+            var parent = count > 0 ? random(lineage.members) : lineage.lastSeen;
             if (parent) {
                 this.sproutNear(parent, count === 0);
             }

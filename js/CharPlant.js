@@ -94,7 +94,7 @@ class CharPlant {
 
     displaySpreadRange() {
         noFill();
-        stroke('oklch(0.68 0.21 25)');
+        stroke(DEBUG_COLOR);
         strokeWeight(1);
         ellipseMode(CENTER);
         ellipse(this.x, this.y, this.spreadRange * 2, this.spreadRange * 2 * PERSPECTIVE);

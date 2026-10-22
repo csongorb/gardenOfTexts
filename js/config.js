@@ -51,6 +51,13 @@ var FRUIT_OUTLINE_MAX = 5; // px; thickness of the fruiting outline when a plant
 var FRUIT_LIGHTNESS = 0.78; // the fruiting outline is the plant's hue with this lightness and chroma
 var FRUIT_CHROMA = 0.2;
 
+// debug (toggled with "D")
+var DEBUG_TEXT_SIZE = 12; // info text in the top left corner
+var DEBUG_LINE_SPACING = 1.25; // its distance between lines = DEBUG_TEXT_SIZE x this
+var DEBUG_COUNT_TEXT_SIZE = 9; // number of living plants next to each lineage's origin
+var DEBUG_ORIGIN_SIZE_FACTOR = 0.5; // each lineage's original letter is outlined on its original spot at this x its original size
+var DEBUG_COLOR = 'oklch(0.68 0.21 25)'; // lineage origins and spread ranges
+
 // performance & saving
 var TARGET_FPS = 30; // the garden moves slowly - more frames would mostly cost CPU/GPU
 var MAX_FRAME_TIME = 0.1; // s; longer frames (e.g. after a backgrounded tab) count as this long, so nothing jumps

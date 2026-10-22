@@ -58,9 +58,12 @@ function mouseReleased(event) {
 }
 
 function cutAtMouse() {
-    myGarden.myPlants = myGarden.myPlants.filter(function (plant) {
-        return !plant.mouseOver(toolRadius);
-    });
+    for (var i = 0; i < myGarden.myPlants.length; i++) {
+        if (myGarden.myPlants[i].mouseOver(toolRadius)) {
+            myGarden.myPlants[i].isDead = true;
+        }
+    }
+    myGarden.removeDead();
 }
 
 function mouseWheel(event) {

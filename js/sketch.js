@@ -1,6 +1,7 @@
 var myGarden;
 var gardenLineSignature = ''; // identifies which ?text=... params the saved garden belongs to
 var debugOn = false; // toggled with "D"
+var debugShowPlants = true; // in debug, toggled with "P"
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -68,12 +69,21 @@ function drawDebugInfo() {
     push();
     noStroke();
     fill('oklch(0.89 0 0)');
-    textSize(16);
+    textSize(DEBUG_TEXT_SIZE);
     textAlign(LEFT, TOP);
-    text('plants: ' + myGarden.myPlants.length, 10, 10);
-    text('fps: ' + round(frameRate()), 10, 30);
+    var lines = ['plants: ' + myGarden.myPlants.length, 'fps: ' + round(frameRate())];
     if (window.performance && performance.memory) { // Chrome only
-        text('memory: ' + round(performance.memory.usedJSHeapSize / 1048576) + ' MB', 10, 50);
+        lines.push('memory: ' + round(performance.memory.usedJSHeapSize / 1048576) + ' MB');
+    }
+    lines.push(
+        '',
+        'D: debug off',
+        'P: plants ' + (debugShowPlants ? 'off' : 'on'),
+        'hold G: faster growth',
+        'hover a plant: spread range'
+    );
+    for (var i = 0; i < lines.length; i++) {
+        text(lines[i], 10, 10 + i * DEBUG_TEXT_SIZE * DEBUG_LINE_SPACING);
     }
     pop();
 }
@@ -89,6 +99,11 @@ function keyPressed() {
     // D
     if (key === 'd' || key === 'D') {
         debugOn = !debugOn;
+    }
+
+    // P (debug only)
+    if (debugOn && (key === 'p' || key === 'P')) {
+        debugShowPlants = !debugShowPlants;
     }
 }
 
