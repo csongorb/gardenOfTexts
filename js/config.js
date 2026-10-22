@@ -53,10 +53,11 @@ var FRUIT_CHROMA = 0.2;
 
 // debug (toggled with "D")
 var DEBUG_TEXT_SIZE = 12; // px; the debug panel in the top left corner
-var DEBUG_LAYERS_DEFAULT = { plants: true, bases: true, origins: true, areas: true, spreadRange: true }; // what's shown when debug starts (checkboxes in the panel)
+var DEBUG_LAYERS_DEFAULT = { plants: true, bases: true, origins: true, areas: true, middles: true, lineY: true, alignedY: true, spreadRange: true }; // what's shown when debug starts (checkboxes in the panel)
 var DEBUG_COUNT_TEXT_SIZE = 9; // number of living plants next to each lineage's origin
 var DEBUG_ORIGIN_SIZE_FACTOR = 0.5; // each lineage's original letter is outlined on its original spot at this x its original size
-var DEBUG_COLOR = 'oklch(0.68 0.21 25)'; // lineage origins and spread ranges
+var DEBUG_ALIGN_EDGE_FACTOR = 0.9; // if a text line's average y lies outside a lineage's area, its middle moves this fraction of the way from the middle to the area's outline
+var DEBUG_COLOR ='oklch(0.68 0.21 25)'; // lineage origins and spread ranges
 
 // performance & saving
 var TARGET_FPS = 30; // the garden moves slowly - more frames would mostly cost CPU/GPU

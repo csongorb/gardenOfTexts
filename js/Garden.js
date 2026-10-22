@@ -137,9 +137,140 @@ class Garden {
             this.displayLineageAreas();
         }
 
+        if (debugOn && debugLayers.middles) {
+            this.displayLineageMiddles();
+        }
+
+        if (debugOn && debugLayers.lineY) {
+            this.displayTextLineY();
+        }
+
+        if (debugOn && debugLayers.alignedY) {
+            this.displayAlignedMiddles();
+        }
+
         if (debugOn && debugLayers.origins) {
             this.displayLineageOrigins();
         }
+    }
+
+    // debug: the living lineages' area middles, grouped per text line, in letter order:
+    // [{ entries: [{ lineage, middle, aligned }, ...], avgY }, ...]
+    // avgY: the line's average middle y; aligned: the middle moved vertically towards avgY, but kept inside its area
+    // (lineages are created in text order; consecutive ones with the same originY and baseSize belong to one text line)
+    textLineMiddles() {
+        var lines = [];
+        var current = null;
+        var prevLineage = null;
+        for (var i = 0; i < this.lineages.length; i++) {
+            var lineage = this.lineages[i];
+            if (!prevLineage || lineage.originY !== prevLineage.originY || lineage.baseSize !== prevLineage.baseSize) {
+                current = { entries: [], avgY: 0 }; // a new text line starts
+                lines.push(current);
+            }
+            prevLineage = lineage;
+            var hull = lineage.hull();
+            var m = lineage.middle(hull);
+            if (m) { // extinct lineages have none
+                current.entries.push({ lineage: lineage, hull: hull, middle: m });
+            }
+        }
+        lines = lines.filter(function (l) {
+            return l.entries.length > 0;
+        });
+
+        for (var l = 0; l < lines.length; l++) {
+            var entries = lines[l].entries;
+            var sumY = 0;
+            for (var i = 0; i < entries.length; i++) {
+                sumY += entries[i].middle.y;
+            }
+            var avgY = sumY / entries.length;
+            lines[l].avgY = avgY;
+
+            for (var i = 0; i < entries.length; i++) {
+                var m = entries[i].middle;
+                var extent = entries[i].lineage.verticalExtent(m.x, entries[i].hull);
+                var y;
+                if (avgY >= extent.top && avgY <= extent.bottom) {
+                    y = avgY; // the average line crosses the area here
+                } else {
+                    var edge = avgY < extent.top ? extent.top : extent.bottom;
+                    y = m.y + (edge - m.y) * DEBUG_ALIGN_EDGE_FACTOR;
+                }
+                entries[i].aligned = { x: m.x, y: y };
+            }
+        }
+        return lines;
+    }
+
+    // debug: a dot at the middle of each lineage's area, and a line through the middles of each text line, in letter order
+    displayLineageMiddles() {
+        push();
+        strokeWeight(1);
+        var lines = this.textLineMiddles();
+        for (var l = 0; l < lines.length; l++) {
+            var entries = lines[l].entries;
+            for (var i = 0; i < entries.length; i++) {
+                var m = entries[i].middle;
+                if (i > 0) {
+                    stroke('oklch(0.6 0 0)');
+                    line(entries[i - 1].middle.x, entries[i - 1].middle.y, m.x, m.y);
+                }
+                noStroke();
+                fill(entries[i].lineage.color());
+                ellipse(m.x, m.y, 6, 6);
+            }
+        }
+        pop();
+    }
+
+    // debug: each text line's average y (of its area middles), as a dashed horizontal line from its leftmost to its rightmost middle
+    displayTextLineY() {
+        var lines = this.textLineMiddles();
+        var ctx = drawingContext;
+        ctx.save();
+        ctx.strokeStyle = 'oklch(0.85 0 0)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([6, 4]);
+        for (var l = 0; l < lines.length; l++) {
+            var entries = lines[l].entries;
+            var minX = Infinity;
+            var maxX = -Infinity;
+            for (var i = 0; i < entries.length; i++) {
+                minX = Math.min(minX, entries[i].middle.x);
+                maxX = Math.max(maxX, entries[i].middle.x);
+            }
+            ctx.beginPath();
+            ctx.moveTo(minX - 20, lines[l].avgY); // a bit longer than the middles, so it's visible for a single one too
+            ctx.lineTo(maxX + 20, lines[l].avgY);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // debug: each middle moved vertically towards its line's average y (as a ring), with a connector showing the move,
+    // and a line through the moved middles of each text line, in letter order
+    displayAlignedMiddles() {
+        push();
+        strokeWeight(1);
+        noFill();
+        var lines = this.textLineMiddles();
+        for (var l = 0; l < lines.length; l++) {
+            var entries = lines[l].entries;
+            for (var i = 0; i < entries.length; i++) {
+                var m = entries[i].middle;
+                var a = entries[i].aligned;
+                stroke('oklch(0.85 0 0)');
+                if (i > 0) {
+                    line(entries[i - 1].aligned.x, entries[i - 1].aligned.y, a.x, a.y);
+                }
+                stroke(entries[i].lineage.color());
+                line(m.x, m.y, a.x, a.y);
+                ellipse(a.x, a.y, 9, 9);
+            }
+        }
+        pop();
     }
 
     // debug: the area each lineage occupies, as the outline around its living plants, in the lineage's hue

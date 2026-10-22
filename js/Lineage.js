@@ -92,6 +92,56 @@ class Lineage {
         return Math.abs(sum) / 2 / PERSPECTIVE;
     }
 
+    // geometric middle of the area: the hull's centroid (center of mass); for fewer than 3 plants or a flat hull, the average of the points
+    middle(hull) {
+        hull = hull || this.hull();
+        if (hull.length === 0) return null;
+        var sum = 0, cx = 0, cy = 0;
+        for (var i = 0; i < hull.length; i++) {
+            var a = hull[i];
+            var b = hull[(i + 1) % hull.length];
+            var c = a.x * b.y - b.x * a.y;
+            sum += c;
+            cx += (a.x + b.x) * c;
+            cy += (a.y + b.y) * c;
+        }
+        if (Math.abs(sum) < 1e-6) {
+            cx = 0;
+            cy = 0;
+            for (var i = 0; i < hull.length; i++) {
+                cx += hull[i].x;
+                cy += hull[i].y;
+            }
+            return { x: cx / hull.length, y: cy / hull.length };
+        }
+        return { x: cx / (3 * sum), y: cy / (3 * sum) };
+    }
+
+    // where the vertical line at x crosses the hull: { top, bottom } (smaller y = higher on screen)
+    verticalExtent(x, hull) {
+        hull = hull || this.hull();
+        var top = Infinity;
+        var bottom = -Infinity;
+        for (var i = 0; i < hull.length; i++) {
+            var a = hull[i];
+            var b = hull[(i + 1) % hull.length]; // 1 point: a = b; 2 points: the segment twice
+            if (x < Math.min(a.x, b.x) || x > Math.max(a.x, b.x)) continue;
+            if (a.x === b.x) { // vertical edge (or a single point): both ends count
+                top = Math.min(top, a.y, b.y);
+                bottom = Math.max(bottom, a.y, b.y);
+            } else {
+                var y = a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x);
+                top = Math.min(top, y);
+                bottom = Math.max(bottom, y);
+            }
+        }
+        if (top > bottom) { // not crossed at all (x outside the hull) - shouldn't happen for the hull's own middle
+            var m = this.middle(hull);
+            return { top: m.y, bottom: m.y };
+        }
+        return { top: top, bottom: bottom };
+    }
+
     get count() {
         return this.members.length;
     }
