@@ -117,29 +117,43 @@ class Lineage {
         return { x: cx / (3 * sum), y: cy / (3 * sum) };
     }
 
-    // where the vertical line at x crosses the hull: { top, bottom } (smaller y = higher on screen)
-    verticalExtent(x, hull) {
+    // the point of the hull nearest to p: p itself (the same object) if it lies inside, otherwise a point on the outline
+    // (1 plant: its position; 2 plants: a point on the segment between them)
+    closestPoint(p, hull) {
         hull = hull || this.hull();
-        var top = Infinity;
-        var bottom = -Infinity;
+        if (hull.length === 0) return null;
+        if (hull.length === 1) return hull[0];
+        function cross(o, a, b) {
+            return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+        }
+        function closestOnSegment(a, b) {
+            var dx = b.x - a.x;
+            var dy = b.y - a.y;
+            var t = constrain(((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
+            return { x: a.x + t * dx, y: a.y + t * dy };
+        }
+        // the hull runs counter-clockwise (left turns only), so inside means left of (or on) every edge
+        if (hull.length >= 3) {
+            var inside = true;
+            for (var i = 0; i < hull.length; i++) {
+                if (cross(hull[i], hull[(i + 1) % hull.length], p) < 0) {
+                    inside = false;
+                    break;
+                }
+            }
+            if (inside) return p;
+        }
+        var best = null;
+        var bestDist = Infinity;
         for (var i = 0; i < hull.length; i++) {
-            var a = hull[i];
-            var b = hull[(i + 1) % hull.length]; // 1 point: a = b; 2 points: the segment twice
-            if (x < Math.min(a.x, b.x) || x > Math.max(a.x, b.x)) continue;
-            if (a.x === b.x) { // vertical edge (or a single point): both ends count
-                top = Math.min(top, a.y, b.y);
-                bottom = Math.max(bottom, a.y, b.y);
-            } else {
-                var y = a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x);
-                top = Math.min(top, y);
-                bottom = Math.max(bottom, y);
+            var q = closestOnSegment(hull[i], hull[(i + 1) % hull.length]); // 2 points: the segment twice
+            var d = (q.x - p.x) * (q.x - p.x) + (q.y - p.y) * (q.y - p.y);
+            if (d < bestDist) {
+                bestDist = d;
+                best = q;
             }
         }
-        if (top > bottom) { // not crossed at all (x outside the hull) - shouldn't happen for the hull's own middle
-            var m = this.middle(hull);
-            return { top: m.y, bottom: m.y };
-        }
-        return { top: top, bottom: bottom };
+        return best;
     }
 
     get count() {

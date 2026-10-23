@@ -137,16 +137,14 @@ class Garden {
             this.displayLineageAreas();
         }
 
+        var lines = debugOn && (debugLayers.middles || debugLayers.textLine) ? this.fitTextLines() : null; // computed once for both layers
+
         if (debugOn && debugLayers.middles) {
-            this.displayLineageMiddles();
+            this.displayLineageMiddles(lines);
         }
 
-        if (debugOn && debugLayers.lineY) {
-            this.displayTextLineY();
-        }
-
-        if (debugOn && debugLayers.alignedY) {
-            this.displayAlignedMiddles();
+        if (debugOn && debugLayers.textLine) {
+            this.displayTextLines(lines);
         }
 
         if (debugOn && debugLayers.origins) {
@@ -155,17 +153,21 @@ class Garden {
     }
 
     // debug: the living lineages' area middles, grouped per text line, in letter order:
-    // [{ entries: [{ lineage, middle, aligned }, ...], avgY }, ...]
-    // avgY: the line's average middle y; aligned: the middle moved vertically towards avgY, but kept inside its area
+    // [{ entries: [{ lineage, hull, middle, target, aligned, orderBroken }, ...], lineY, scale }, ...]
+    // the original text line is used as a template: its spacing is stretched by scale (the median over all letter pairs of how much
+    // wider apart their middles are than their origins), then it's shifted as a whole by the median of (middle - origin) -
+    // medians, so a single wild lineage doesn't move it; target: where the letter would be on that fitted, straight line (y = lineY);
+    // aligned: the target if it lies inside the letter's area, otherwise the middle moved towards the area's edge point nearest to the target,
+    // then put into letter order where the areas allow it (see orderAlignedMiddles; orderBroken: they don't)
     // (lineages are created in text order; consecutive ones with the same originY and baseSize belong to one text line)
-    textLineMiddles() {
+    fitTextLines() {
         var lines = [];
         var current = null;
         var prevLineage = null;
         for (var i = 0; i < this.lineages.length; i++) {
             var lineage = this.lineages[i];
             if (!prevLineage || lineage.originY !== prevLineage.originY || lineage.baseSize !== prevLineage.baseSize) {
-                current = { entries: [], avgY: 0 }; // a new text line starts
+                current = { entries: [], lineY: 0 }; // a new text line starts
                 lines.push(current);
             }
             prevLineage = lineage;
@@ -181,34 +183,82 @@ class Garden {
 
         for (var l = 0; l < lines.length; l++) {
             var entries = lines[l].entries;
-            var sumY = 0;
+
+            // spacing: for every pair of letters, how much wider apart their middles are now than their origins
+            var slopes = [];
             for (var i = 0; i < entries.length; i++) {
-                sumY += entries[i].middle.y;
+                for (var j = i + 1; j < entries.length; j++) {
+                    var originDist = entries[j].lineage.originX - entries[i].lineage.originX;
+                    if (originDist === 0) continue;
+                    slopes.push((entries[j].middle.x - entries[i].middle.x) / originDist);
+                }
             }
-            var avgY = sumY / entries.length;
-            lines[l].avgY = avgY;
+            var scale = slopes.length > 0 ? Math.max(median(slopes), DEBUG_FIT_SCALE_MIN) : 1;
+            lines[l].scale = scale;
+
+            var shiftX = median(entries.map(function (e) {
+                return e.middle.x - e.lineage.originX * scale;
+            }));
+            var shiftY = median(entries.map(function (e) {
+                return e.middle.y - e.lineage.originY;
+            }));
+            var lineY = entries[0].lineage.originY + shiftY; // all letters of a line share the same originY
+            lines[l].lineY = lineY;
 
             for (var i = 0; i < entries.length; i++) {
                 var m = entries[i].middle;
-                var extent = entries[i].lineage.verticalExtent(m.x, entries[i].hull);
-                var y;
-                if (avgY >= extent.top && avgY <= extent.bottom) {
-                    y = avgY; // the average line crosses the area here
+                var target = { x: entries[i].lineage.originX * scale + shiftX, y: lineY };
+                var edge = entries[i].lineage.closestPoint(target, entries[i].hull);
+                entries[i].target = target;
+                if (edge === target) {
+                    entries[i].aligned = target; // the area reaches the line here
                 } else {
-                    var edge = avgY < extent.top ? extent.top : extent.bottom;
-                    y = m.y + (edge - m.y) * DEBUG_ALIGN_EDGE_FACTOR;
+                    entries[i].aligned = { x: m.x + (edge.x - m.x) * DEBUG_ALIGN_EDGE_FACTOR, y: m.y + (edge.y - m.y) * DEBUG_ALIGN_EDGE_FACTOR };
                 }
-                entries[i].aligned = { x: m.x, y: y };
             }
+
+            this.orderAlignedMiddles(entries);
         }
         return lines;
     }
 
+    // debug: keeps the aligned middles of a text line in letter order (at least a gap apart in x), where the areas allow it:
+    // for each pair in the wrong order, either the right letter moves into the part of its area right of the left one,
+    // or the left letter into the part of its area left of the right one - whichever moves less (each as close to its target as possible);
+    // repeated, as fixing one pair can break the next; letters still out of order afterwards get orderBroken = true
+    orderAlignedMiddles(entries) {
+        function moveDist(e, p) {
+            return Math.hypot(p.x - e.aligned.x, p.y - e.aligned.y);
+        }
+        for (var pass = 0; pass < entries.length; pass++) {
+            var changed = false;
+            for (var i = 1; i < entries.length; i++) {
+                var a = entries[i - 1];
+                var b = entries[i];
+                var gap = DEBUG_ORDER_GAP_FACTOR * b.lineage.baseSize;
+                if (b.aligned.x >= a.aligned.x + gap) continue;
+                var moveB = b.lineage.closestPoint(b.target, clipHullX(b.hull, a.aligned.x + gap, Infinity));
+                var moveA = a.lineage.closestPoint(a.target, clipHullX(a.hull, -Infinity, b.aligned.x - gap));
+                if (moveB && (!moveA || moveDist(b, moveB) <= moveDist(a, moveA))) {
+                    b.aligned = moveB;
+                    changed = true;
+                } else if (moveA) {
+                    a.aligned = moveA;
+                    changed = true;
+                }
+            }
+            if (!changed) break;
+        }
+        for (var i = 0; i < entries.length; i++) {
+            entries[i].orderBroken = i > 0 && entries[i].aligned.x < entries[i - 1].aligned.x + DEBUG_ORDER_GAP_FACTOR * entries[i].lineage.baseSize;
+        }
+    }
+
     // debug: a dot at the middle of each lineage's area, and a line through the middles of each text line, in letter order
-    displayLineageMiddles() {
+    // (lines: from fitTextLines)
+    displayLineageMiddles(lines) {
         push();
         strokeWeight(1);
-        var lines = this.textLineMiddles();
         for (var l = 0; l < lines.length; l++) {
             var entries = lines[l].entries;
             for (var i = 0; i < entries.length; i++) {
@@ -225,49 +275,59 @@ class Garden {
         pop();
     }
 
-    // debug: each text line's average y (of its area middles), as a dashed horizontal line from its leftmost to its rightmost middle
-    displayTextLineY() {
-        var lines = this.textLineMiddles();
+    // debug: each fitted text line (lines: from fitTextLines) as a dashed horizontal line from its first to its last target,
+    // with its spacing factor; per letter its target (small cross) and aligned middle (ring) with a connector from the middle
+    // showing the move; and a line through the aligned middles, in letter order
+    displayTextLines(lines) {
         var ctx = drawingContext;
         ctx.save();
         ctx.strokeStyle = 'oklch(0.85 0 0)';
         ctx.lineWidth = 1;
         ctx.setLineDash([6, 4]);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.font = DEBUG_COUNT_TEXT_SIZE + 'px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
         for (var l = 0; l < lines.length; l++) {
             var entries = lines[l].entries;
             var minX = Infinity;
             var maxX = -Infinity;
             for (var i = 0; i < entries.length; i++) {
-                minX = Math.min(minX, entries[i].middle.x);
-                maxX = Math.max(maxX, entries[i].middle.x);
+                minX = Math.min(minX, entries[i].target.x);
+                maxX = Math.max(maxX, entries[i].target.x);
             }
             ctx.beginPath();
-            ctx.moveTo(minX - 20, lines[l].avgY); // a bit longer than the middles, so it's visible for a single one too
-            ctx.lineTo(maxX + 20, lines[l].avgY);
+            ctx.moveTo(minX - 20, lines[l].lineY); // a bit longer than the targets, so it's visible for a single one too
+            ctx.lineTo(maxX + 20, lines[l].lineY);
             ctx.stroke();
+            ctx.fillText('×' + lines[l].scale.toFixed(1), maxX + 24, lines[l].lineY); // the fitted spacing factor
         }
         ctx.restore();
-    }
 
-    // debug: each middle moved vertically towards its line's average y (as a ring), with a connector showing the move,
-    // and a line through the moved middles of each text line, in letter order
-    displayAlignedMiddles() {
         push();
         strokeWeight(1);
         noFill();
-        var lines = this.textLineMiddles();
         for (var l = 0; l < lines.length; l++) {
             var entries = lines[l].entries;
             for (var i = 0; i < entries.length; i++) {
                 var m = entries[i].middle;
                 var a = entries[i].aligned;
-                stroke('oklch(0.85 0 0)');
                 if (i > 0) {
+                    stroke('oklch(0.85 0 0)');
+                    strokeWeight(2.5); // the text as it can be read now - the main line of this layer
                     line(entries[i - 1].aligned.x, entries[i - 1].aligned.y, a.x, a.y);
+                    strokeWeight(1);
                 }
                 stroke(entries[i].lineage.color());
                 line(m.x, m.y, a.x, a.y);
+                if (entries[i].orderBroken) {
+                    stroke(DEBUG_COLOR); // out of order, and its area doesn't allow fixing it
+                }
                 ellipse(a.x, a.y, 9, 9);
+                stroke(entries[i].lineage.color());
+                var t = entries[i].target;
+                line(t.x - 3, t.y - 3, t.x + 3, t.y + 3);
+                line(t.x - 3, t.y + 3, t.x + 3, t.y - 3);
             }
         }
         pop();

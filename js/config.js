@@ -43,7 +43,7 @@ var RARE_POPULATION_SCALE = 1.5; // how fast that chance fades with living plant
 var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled ground-plane ellipse
 var BACKGROUND_COLOR = 'oklch(0.19 0 0)'; // all colors are OKLCH: lightness 0-1, chroma 0-0.4, hue 0-360
 var GROUND_FILL = 'oklch(0.28 0 0)'; // a plant's ground ellipse
-var GROUND_OUTLINE = 'oklch(0.43 0 0)'; // its outline
+var GROUND_OUTLINE = 'oklch(0.28 0 0)'; // its outline
 var PLANT_LIGHTNESS = 0.65; // the same for all plants - only the hue differs
 var PLANT_CHROMA = 0.15;
 var TILT_MAX = 8; // degrees; each letter is tilted randomly by up to this, left or right
@@ -53,10 +53,12 @@ var FRUIT_CHROMA = 0.2;
 
 // debug (toggled with "D")
 var DEBUG_TEXT_SIZE = 12; // px; the debug panel in the top left corner
-var DEBUG_LAYERS_DEFAULT = { plants: true, bases: true, origins: true, areas: true, middles: true, lineY: true, alignedY: true, spreadRange: true }; // what's shown when debug starts (checkboxes in the panel)
+var DEBUG_LAYERS_DEFAULT = { plants: true, bases: true, spreadRange: true, origins: true, areas: true, middles: true, textLine: true }; // what's shown when debug starts (checkboxes in the panel)
 var DEBUG_COUNT_TEXT_SIZE = 9; // number of living plants next to each lineage's origin
 var DEBUG_ORIGIN_SIZE_FACTOR = 0.5; // each lineage's original letter is outlined on its original spot at this x its original size
-var DEBUG_ALIGN_EDGE_FACTOR = 0.9; // if a text line's average y lies outside a lineage's area, its middle moves this fraction of the way from the middle to the area's outline
+var DEBUG_ALIGN_EDGE_FACTOR = 0.9; // if a letter's target on its fitted text line lies outside its area, the aligned middle moves this fraction of the way from the middle to the area's edge point nearest to the target
+var DEBUG_ORDER_GAP_FACTOR = 0.25; // neighbouring aligned middles are kept at least this x the letter's original size apart in x (in text order)
+var DEBUG_FIT_SCALE_MIN = 1; // the fitted text line's letter spacing is never narrower than this x the original
 var DEBUG_COLOR ='oklch(0.68 0.21 25)'; // lineage origins and spread ranges
 var SIM_SPEED_MAX = 1000; // top of the panel's speed slider (logarithmic, from 1x up to this)
 
