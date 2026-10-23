@@ -1,5 +1,19 @@
 # Process Journal
 
+## 2026-10-23: Readability line
+
+The OLKCH transition was easy and also effective, it has solved some of the issues. The visual chaos is slightly decreased, the letters have a more even tone.  
+Unfortunately, I would still not consider the Art Direction as even existing, so I'll need to come back to this later. Maybe working with palettes?
+
+I have managed to build an ok logic to soon be able to experiment with readability. Tried to find some kind of a weighted / eye-line middle of each plant-lineage (all plants of the same character seed).  
+It was again one of this more interesting AI / Claude cooperation experiences. Asking for possible solutions to improve readability based on the 2026-10-15 version was just not leading to any reliable results, it was pure chaos. I needed to expand the idea of a *lineage* myself first (and make the mistake of starting with some averaging of the y-axis), before Claude could come up with a good solution.  
+You can read about the solution here, it has some good ideas: [../concepts/261023_readabilityLine.md](../concepts/261023_readabilityLine.md).
+
+And also just now, a very human moment?  
+I honestly have no clue what I exactly want to do with this *readability line*. I have some ideas, obviously there are a lot of possibilities of knowing where the *middle* of each char is (changing the colour, the position of new plants, etc.).  
+But where is the line? I don't want to artificially push the growth to a more readable state too much. That is still up for the player to do, through watering and cutting.  
+It doesn't feel very natural to say that new plants do grow more towards their origin. Or does it? Or can I do already enough by colouring?
+
 ## 2026-10-14: OLKCH & Areas
 
 This is just so awesome, why have I not known this until now? Yes, RGB-colors are really difficult to work with algorithmically, this seems to be much more closed to a humanly understandable / managable idea. Closer to humans.  
