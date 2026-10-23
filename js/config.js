@@ -7,7 +7,7 @@ var TOOL_RADIUS_DEFAULT = 100; // start size of the tool circle around the mouse
 var TOOL_RADIUS_MIN = 30;
 var TOOL_RADIUS_MAX = 500;
 var TOOL_COLORS = { water: [0.27, 0.12, 264], cut: [0.30, 0.11, 27] }; // OKLCH: [lightness 0-1, chroma 0-0.4, hue 0-360]
-var WATER_BOOST = 20; // growth multiplier under the water circle (and the whole simulation's speed while holding "G" in debug mode)
+var WATER_BOOST = 20; // growth multiplier under the water circle
 
 // text
 var DEFAULT_TEXT_SIZE = 100; // font size for a ?text=... without a size
@@ -58,6 +58,7 @@ var DEBUG_COUNT_TEXT_SIZE = 9; // number of living plants next to each lineage's
 var DEBUG_ORIGIN_SIZE_FACTOR = 0.5; // each lineage's original letter is outlined on its original spot at this x its original size
 var DEBUG_ALIGN_EDGE_FACTOR = 0.9; // if a text line's average y lies outside a lineage's area, its middle moves this fraction of the way from the middle to the area's outline
 var DEBUG_COLOR ='oklch(0.68 0.21 25)'; // lineage origins and spread ranges
+var SIM_SPEED_MAX = 1000; // top of the panel's speed slider (logarithmic, from 1x up to this)
 
 // performance & saving
 var TARGET_FPS = 30; // the garden moves slowly - more frames would mostly cost CPU/GPU

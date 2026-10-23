@@ -5,18 +5,16 @@ var debugLayers = Object.assign({}, DEBUG_LAYERS_DEFAULT); // in debug, toggled 
 var debugStatsTime = 0; // ms; last update of the panel's stats
 var simTime = 0; // s of simulated time not yet run as ticks
 var lastTicks = 0; // ticks run in the last frame (shown in the debug panel)
+var debugSpeed = 1; // in debug, set with the panel's slider
 
 // plants and bases always show outside debug; in debug, only if their checkbox is on
 function showLayer(name) {
     return !debugOn || debugLayers[name];
 }
 
-// how many seconds of simulated time pass per real second
+// how many seconds of simulated time pass per real second (outside debug always 1)
 function simSpeed() {
-    if (debugOn && (keyIsDown('g') || keyIsDown('G'))) { // hold "G" to speed up the whole simulation
-        return WATER_BOOST;
-    }
-    return 1;
+    return debugOn ? debugSpeed : 1;
 }
 
 function setup() {
@@ -53,6 +51,11 @@ function setup() {
         checkbox.addEventListener('change', function () {
             debugLayers[checkbox.dataset.layer] = checkbox.checked;
         });
+    });
+    var speedSlider = document.getElementById('sim-speed');
+    speedSlider.addEventListener('input', function () {
+        debugSpeed = Math.pow(SIM_SPEED_MAX, speedSlider.value);
+        document.getElementById('sim-speed-value').textContent = round(debugSpeed) + 'x';
     });
 
     setupPinch(drawingContext.canvas);
