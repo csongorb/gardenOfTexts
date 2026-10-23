@@ -7,7 +7,7 @@ var TOOL_RADIUS_DEFAULT = 100; // start size of the tool circle around the mouse
 var TOOL_RADIUS_MIN = 30;
 var TOOL_RADIUS_MAX = 500;
 var TOOL_COLORS = { water: [0.27, 0.12, 264], cut: [0.30, 0.11, 27] }; // OKLCH: [lightness 0-1, chroma 0-0.4, hue 0-360]
-var WATER_BOOST = 20; // growth multiplier under the water circle (and while holding "G" in debug mode)
+var WATER_BOOST = 20; // growth multiplier under the water circle (and the whole simulation's speed while holding "G" in debug mode)
 
 // text
 var DEFAULT_TEXT_SIZE = 100; // font size for a ?text=... without a size
@@ -62,5 +62,7 @@ var DEBUG_COLOR ='oklch(0.68 0.21 25)'; // lineage origins and spread ranges
 // performance & saving
 var TARGET_FPS = 30; // the garden moves slowly - more frames would mostly cost CPU/GPU
 var MAX_FRAME_TIME = 0.1; // s; longer frames (e.g. after a backgrounded tab) count as this long, so nothing jumps
+var SIM_TICK = 0.1; // s of simulated time per update; faster simulation = more ticks per frame, each the same size
+var SIM_TICKS_MAX = 200; // ticks per frame at most, so the tab never freezes (the rest is dropped, the simulation just runs slower)
 var GARDEN_STORAGE_KEY = 'gardenOfTextState'; // plant positions are relative to the screen center
 var GARDEN_SAVE_INTERVAL = 5000; // ms

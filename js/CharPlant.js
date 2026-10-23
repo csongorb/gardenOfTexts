@@ -113,7 +113,7 @@ class CharPlant {
 
             var g = dt * (this.maxSize / this.growDuration); // full size after growDuration seconds, regardless of size
 
-            if ((toolMode === 'water' && mouseOverCanvas && this.mouseOver(toolRadius)) || (debugOn && (keyIsDown('g') || keyIsDown('G')))) { // hold "G" to speed up all growth
+            if (toolMode === 'water' && mouseOverCanvas && this.mouseOver(toolRadius)) {
                 g = g * WATER_BOOST;
             }
 

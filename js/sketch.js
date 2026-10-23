@@ -3,10 +3,20 @@ var gardenLineSignature = ''; // identifies which ?text=... params the saved gar
 var debugOn = false; // toggled with "D"
 var debugLayers = Object.assign({}, DEBUG_LAYERS_DEFAULT); // in debug, toggled with the panel's checkboxes
 var debugStatsTime = 0; // ms; last update of the panel's stats
+var simTime = 0; // s of simulated time not yet run as ticks
+var lastTicks = 0; // ticks run in the last frame (shown in the debug panel)
 
 // plants and bases always show outside debug; in debug, only if their checkbox is on
 function showLayer(name) {
     return !debugOn || debugLayers[name];
+}
+
+// how many seconds of simulated time pass per real second
+function simSpeed() {
+    if (debugOn && (keyIsDown('g') || keyIsDown('G'))) { // hold "G" to speed up the whole simulation
+        return WATER_BOOST;
+    }
+    return 1;
 }
 
 function setup() {
@@ -64,7 +74,19 @@ function setup() {
 
 function draw() {
     var dt = Math.min(deltaTime / 1000, MAX_FRAME_TIME); // seconds since the last frame
-    myGarden.update(dt);
+
+    // fixed-size ticks: speeding up runs more of them, so every part of the simulation sees the same step size
+    simTime += dt * simSpeed();
+    var ticks = 0;
+    while (simTime >= SIM_TICK && ticks < SIM_TICKS_MAX) {
+        myGarden.update(SIM_TICK);
+        simTime -= SIM_TICK;
+        ticks++;
+    }
+    if (ticks === SIM_TICKS_MAX) {
+        simTime = 0; // too slow to keep up - drop the rest instead of piling it up
+    }
+    lastTicks = ticks;
 
     background(BACKGROUND_COLOR);
     strokeWeight(2);
@@ -83,7 +105,7 @@ function draw() {
 function updateDebugStats() {
     if (millis() - debugStatsTime < 250) return;
     debugStatsTime = millis();
-    var lines = ['plants: ' + myGarden.myPlants.length, 'fps: ' + round(frameRate())];
+    var lines = ['plants: ' + myGarden.myPlants.length, 'fps: ' + round(frameRate()), 'ticks/frame: ' + lastTicks];
     if (window.performance && performance.memory) { // Chrome only
         lines.push('memory: ' + round(performance.memory.usedJSHeapSize / 1048576) + ' MB');
     }
