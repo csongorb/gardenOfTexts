@@ -13,7 +13,7 @@ class Lineage {
         this.originY = _originY;
         this.baseSize = _baseSize;
         this.members = []; // living plants of this lineage
-        this.lastSeen = null; // last living plant, so an extinct lineage can sprout again there
+        this.lastSeen = null; // last living plant: an extinct lineage sprouts again with its genes (and at its spot, if its whole text line is extinct)
     }
 
     static fromSerialized(data, id) {

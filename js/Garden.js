@@ -393,27 +393,60 @@ class Garden {
     }
 
     // lineages with few living plants get extra sprouts around their population (the fewer, the likelier);
-    // an extinct lineage sprouts again near its last seen plant
+    // an extinct lineage sprouts again in the gap it left in the text (see homeOf), with the genes of its last seen plant
     sproutRare(dt) {
         for (var l = 0; l < this.lineages.length; l++) {
             var lineage = this.lineages[l];
             var count = lineage.count;
             var chance = RARE_SPROUT_CHANCE * Math.exp(-count / RARE_POPULATION_SCALE) * dt;
             if (random() >= chance) continue;
-            var parent = count > 0 ? random(lineage.members) : lineage.lastSeen;
-            if (parent) {
-                this.sproutNear(parent, count === 0);
+            if (count > 0) {
+                this.sproutNear(random(lineage.members));
+            } else if (lineage.lastSeen) {
+                var home = this.homeOf(lineage);
+                this.addPlant(lineage.lastSeen.makeChild(home.x, home.y)); // no space check - the letter has to come back
             }
         }
     }
 
-    // tries a few spots around the parent; if forced (extinct lineage) and none is free, sprouts on the parent's own spot
-    sproutNear(parent, force) {
+    // where an extinct lineage sprouts again, from the aligned middles of the living letters of its text line (see fitTextLines):
+    // between its nearest living neighbours before and after it (spread by originX, so several missing letters share the gap evenly);
+    // with a neighbour on one side only: one fitted letter spacing beyond it, at the average y of the line's aligned middles;
+    // if its whole line is extinct: where its last seen plant was
+    homeOf(lineage) {
+        var lines = this.fitTextLines();
+        for (var l = 0; l < lines.length; l++) {
+            var entries = lines[l].entries;
+            if (entries[0].lineage.originY !== lineage.originY || entries[0].lineage.baseSize !== lineage.baseSize) continue; // not its line
+
+            var before = null;
+            var after = null;
+            var sumY = 0;
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].lineage.originX < lineage.originX) before = entries[i];
+                if (entries[i].lineage.originX > lineage.originX && !after) after = entries[i];
+                sumY += entries[i].aligned.y;
+            }
+            if (before && after) {
+                var t = (lineage.originX - before.lineage.originX) / (after.lineage.originX - before.lineage.originX);
+                return {
+                    x: before.aligned.x + t * (after.aligned.x - before.aligned.x),
+                    y: before.aligned.y + t * (after.aligned.y - before.aligned.y)
+                };
+            }
+            var neighbour = before || after;
+            return {
+                x: neighbour.aligned.x + (lineage.originX - neighbour.lineage.originX) * lines[l].scale,
+                y: sumY / entries.length
+            };
+        }
+        return { x: lineage.lastSeen.x, y: lineage.lastSeen.y };
+    }
+
+    // tries a few spots around the parent
+    sproutNear(parent) {
         for (var attempt = 0; attempt < 5; attempt++) {
             if (parent.plantSpread(this)) return;
-        }
-        if (force) {
-            this.addPlant(parent.makeChild(parent.x, parent.y));
         }
     }
 
