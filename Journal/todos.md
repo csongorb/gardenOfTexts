@@ -12,6 +12,7 @@
 
 ## Done
 
+- ~~added observing mode~~
 - ~~adding lineage and calculating their "middles"~~
 - ~~color update, somehow making sure that the colors are working together~~
 - ~~establishing OLKCH~~

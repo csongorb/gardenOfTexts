@@ -6,7 +6,7 @@
 var TOOL_RADIUS_DEFAULT = 100; // start size of the tool circle around the mouse (mouse wheel or pinch changes it)
 var TOOL_RADIUS_MIN = 30;
 var TOOL_RADIUS_MAX = 500;
-var TOOL_COLORS = { water: [0.27, 0.12, 264], cut: [0.30, 0.11, 27] }; // OKLCH: [lightness 0-1, chroma 0-0.4, hue 0-360]
+var TOOL_COLORS = { observe: [0.30, 0.11, 145], water: [0.27, 0.12, 264], cut: [0.30, 0.11, 27] }; // OKLCH: [lightness 0-1, chroma 0-0.4, hue 0-360] (observe has no circle - only its label uses the color)
 var WATER_BOOST = 20; // growth multiplier under the water circle
 
 // text

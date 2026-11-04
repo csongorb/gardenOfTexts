@@ -1,4 +1,5 @@
-var toolMode = 'water'; // 'water': hovering boosts growth / 'cut': left click removes plants; right click toggles
+var TOOL_MODES = ['observe', 'water', 'cut']; // right click cycles through them in this order
+var toolMode = 'observe'; // 'observe': nothing, just watch / 'water': hovering boosts growth / 'cut': left click removes plants
 var toolRadius = TOOL_RADIUS_DEFAULT; // mouse wheel or pinch changes it
 var mouseOverCanvas = true;
 var touchPinched = false; // true while the current touch involves (or involved) a second finger
@@ -13,7 +14,7 @@ function gardenMouse() {
 }
 
 function drawToolCircle() {
-    if (mouseOverCanvas) {
+    if (mouseOverCanvas && toolMode !== 'observe') { // observing has no tool
         noStroke();
         fill('oklch(' + TOOL_COLORS[toolMode].join(' ') + ')');
         ellipseMode(CENTER);
@@ -42,7 +43,7 @@ function mousePressed(event) {
     if (event.pointerType === 'touch') return; // touch cuts on release instead, see mouseReleased()
 
     if (event.button === 2) { // right click
-        setToolMode(toolMode === 'water' ? 'cut' : 'water');
+        setToolMode(TOOL_MODES[(TOOL_MODES.indexOf(toolMode) + 1) % TOOL_MODES.length]);
     } else if (event.button === 0 && toolMode === 'cut') { // left click
         cutAtMouse();
     }

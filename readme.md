@@ -1,6 +1,6 @@
 # Garden of Texts
 
-A garden of texts. For you to *observe, water, and cut*.
+A (work in progress) garden of texts. For you to *observe, water, and cut*.
 
 You can **[plant your first garden](https://csongorb.github.io/gardenOfTexts/)**.  
 Or **[send a garden as a present](https://csongorb.github.io/gardenOfTexts/?text=Send&text=a+garden&text=as+a+present)**.
@@ -9,9 +9,10 @@ Or **[send a garden as a present](https://csongorb.github.io/gardenOfTexts/?text
 
 | | Mouse / Keyboard | Touch |
 |---|---|---|
+| **Observe** | just watch (the default) | just watch (the default) |
 | **Water** | hover | touch and hold / move |
 | **Cut** | left click | tap and release |
-| **Switch mode** | right click | bottom left |
+| **Switch mode** | right click (cycles) or bottom left | bottom left |
 | **Change circle size** | mouse wheel | pinch |
 | **Fullscreen** | `F` | – |
 
