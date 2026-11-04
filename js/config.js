@@ -52,7 +52,7 @@ var COLOR_MID_DIST = 120; // px on the ground (same for all letters); where the 
 var COLOR_SOFTNESS = 15; // px; how sharp that turn is: small = almost a step, large = gentle (the turn covers about COLOR_MID_DIST +/- 2x this)
 var TILT_MAX = 8; // degrees; each letter is tilted randomly by up to this, left or right
 var FRUIT_OUTLINE_MAX = 5; // px; thickness of the fruiting outline when a plant is fully grown
-var FRUIT_LIGHTNESS_SHIFT = 0.1; // the fruiting outline is the plant's own colour, this much lighter (negative = darker)...
+var FRUIT_LIGHTNESS_SHIFT = 0.5; // the fruiting outline is the plant's own colour, this much lighter (negative = darker)...
 var FRUIT_CHROMA_SHIFT = 0.04; // ...and this much more vivid - so far (dark) plants keep dark fruits and don't hurt readability
 
 // debug (toggled with "D")
