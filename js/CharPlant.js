@@ -10,7 +10,7 @@ function charPlantFromSerialized(data) {
     plant.spreadRange = data.spreadRange;
     plant.isMaturing = data.isMaturing;
     plant.growDuration = data.growDuration;
-    plant.setHue(data.h);
+    plant.setColor(data.h, data.l !== undefined ? data.l : NEAR_LIGHTNESS, data.c !== undefined ? data.c : NEAR_CHROMA);
     return plant;
 }
 
@@ -25,7 +25,7 @@ class CharPlant {
         this.maxSize = constrain(_maxSize + random(-_maxSize * SIZE_MUTATION, _maxSize * SIZE_MUTATION), _baseSize * SIZE_MIN_FACTOR, _baseSize * SIZE_MAX_FACTOR);
         this.size = 1;
         this.tilt = random(-TILT_MAX, TILT_MAX);
-        this.setHue(_parentHue !== undefined ? (_parentHue + random(-HUE_MUTATION, HUE_MUTATION) + 360) % 360 : random(0, 360));
+        this.setColor(_parentHue !== undefined ? (_parentHue + random(-HUE_MUTATION, HUE_MUTATION) + 360) % 360 : random(0, 360), NEAR_LIGHTNESS, NEAR_CHROMA); // spread seedlings get theirs from the garden (Garden.colorByDistance)
         var duration = _parentGrowDuration || GROW_DURATION_DEFAULT;
         this.growDuration = constrain(duration + random(-duration * GROW_DURATION_MUTATION, duration * GROW_DURATION_MUTATION), GROW_DURATION_MIN, GROW_DURATION_MAX); // seconds to full size
         this.spreadRange = this.maxSize * SPREAD_RANGE_FACTOR;
@@ -35,9 +35,11 @@ class CharPlant {
     }
 
     // caches the color as a CSS string, so drawing doesn't need to build it every frame
-    setHue(h) {
+    setColor(h, l, c) {
         this.hue = h;
-        this.cStr = 'oklch(' + PLANT_LIGHTNESS + ' ' + PLANT_CHROMA + ' ' + h + ')';
+        this.lightness = l;
+        this.chroma = c;
+        this.cStr = 'oklch(' + l + ' ' + c + ' ' + h + ')';
     }
 
     preGrow() {
@@ -58,7 +60,9 @@ class CharPlant {
             baseSize: this.baseSize,
             growDuration: this.growDuration,
             lineage: this.lineage,
-            h: this.hue
+            h: this.hue,
+            l: this.lightness,
+            c: this.chroma
         };
     }
 
@@ -74,11 +78,13 @@ class CharPlant {
         ctx.fillStyle = this.cStr;
         ctx.fillText(this.char, 0, 0);
         if (this.isMaturing) {
-            // fruiting outline: from 0 to FRUIT_OUTLINE_MAX thick, from the plant's lightness/chroma to the fruit's, while maturing
+            // fruiting outline: from 0 to FRUIT_OUTLINE_MAX thick, from the plant's own colour to the shifted one, while maturing
             var l = 1 - (1 - (this.size / this.maxSize)) / (1 - MATURING_START);
             if (l > 0) {
                 ctx.lineWidth = lerp(0.0, FRUIT_OUTLINE_MAX, l);
-                ctx.strokeStyle = 'oklch(' + lerp(PLANT_LIGHTNESS, FRUIT_LIGHTNESS, l) + ' ' + lerp(PLANT_CHROMA, FRUIT_CHROMA, l) + ' ' + this.hue + ')';
+                var fruitL = constrain(this.lightness + FRUIT_LIGHTNESS_SHIFT * l, 0, 1);
+                var fruitC = constrain(this.chroma + FRUIT_CHROMA_SHIFT * l, 0, 0.4);
+                ctx.strokeStyle = 'oklch(' + fruitL + ' ' + fruitC + ' ' + this.hue + ')';
                 ctx.strokeText(this.char, 0, 0);
             }
         }
@@ -147,7 +153,9 @@ class CharPlant {
         if (!isOnScreen(pos.x, pos.y, this.maxSize)) {
             pos = { x: this.x, y: this.y }; // don't drift off screen - stay on the parent's spot instead
         }
-        garden.addPlant(this.makeChild(pos.x, pos.y));
+        var child = this.makeChild(pos.x, pos.y);
+        garden.colorByDistance(child);
+        garden.addPlant(child);
     }
 
     // a new seedling at (x, y), inheriting this plant's genes (with mutation) and lineage
@@ -160,7 +168,9 @@ class CharPlant {
     plantSpread(garden) {
         var pos = this.randomPositionNear(this.spreadRange);
         if (isOnScreen(pos.x, pos.y, this.maxSize) && garden.hasSpaceAt(pos.x, pos.y, this.maxSize / 4)) {
-            garden.addPlant(this.makeChild(pos.x, pos.y));
+            var child = this.makeChild(pos.x, pos.y);
+            garden.colorByDistance(child);
+            garden.addPlant(child);
             return true;
         }
         return false;

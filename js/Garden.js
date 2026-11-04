@@ -79,6 +79,7 @@ class Garden {
 
     // simulation: advances the garden by dt seconds
     update(dt) {
+        this.fitCache = null; // the text-line fit is computed again (lazily) for this tick's births, see alignedMiddleOf
         for (var i = 0; i < this.myPlants.length; i++) {
             this.myPlants[i].grow(dt, this);
         }
@@ -325,6 +326,9 @@ class Garden {
                 }
                 ellipse(a.x, a.y, 9, 9);
                 stroke(entries[i].lineage.color());
+                drawingContext.globalAlpha = 0.3;
+                ellipse(a.x, a.y, COLOR_MID_DIST * 2, COLOR_MID_DIST * 2 * PERSPECTIVE); // where new plants' colour turns from NEAR to FAR
+                drawingContext.globalAlpha = 1;
                 var t = entries[i].target;
                 line(t.x - 3, t.y - 3, t.x + 3, t.y + 3);
                 line(t.x - 3, t.y + 3, t.x + 3, t.y - 3);
@@ -441,6 +445,31 @@ class Garden {
             };
         }
         return { x: lineage.lastSeen.x, y: lineage.lastSeen.y };
+    }
+
+    // the aligned middle of a lineage (see fitTextLines), or null if it's extinct; the fit is computed at most once per tick
+    alignedMiddleOf(lineage) {
+        if (!this.fitCache) {
+            this.fitCache = {};
+            var lines = this.fitTextLines();
+            for (var l = 0; l < lines.length; l++) {
+                for (var i = 0; i < lines[l].entries.length; i++) {
+                    this.fitCache[lines[l].entries[i].lineage.id] = lines[l].entries[i].aligned;
+                }
+            }
+        }
+        return this.fitCache[lineage.id] || null;
+    }
+
+    // a seedling born by spreading gets its lightness and chroma from its distance to its letter's aligned middle (once, at birth):
+    // NEAR colour close to it, FAR colour further away, turning along an S-curve around COLOR_MID_DIST
+    colorByDistance(plant) {
+        var lineage = this.lineages[plant.lineage];
+        var middle = lineage ? this.alignedMiddleOf(lineage) : null;
+        if (!middle) return; // keeps the NEAR colour
+        var d = ellipticalDist(plant.x, plant.y, middle.x, middle.y);
+        var s = 1 / (1 + Math.exp(-(d - COLOR_MID_DIST) / COLOR_SOFTNESS)); // 0 = near, 1 = far
+        plant.setColor(plant.hue, lerp(NEAR_LIGHTNESS, FAR_LIGHTNESS, s), lerp(NEAR_CHROMA, FAR_CHROMA, s));
     }
 
     // tries a few spots around the parent

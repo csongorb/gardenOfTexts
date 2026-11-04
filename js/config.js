@@ -23,7 +23,7 @@ var GROW_DURATION_DEFAULT = 600; // seconds from seed to full size (without wate
 var GROW_DURATION_MIN = 120;
 var GROW_DURATION_MAX = 1800;
 var GROW_DURATION_MUTATION = 1 / 12; // a child's grow duration = parent's +/- up to this fraction
-var HUE_MUTATION = 10; // a child's hue = parent's +/- up to this many degrees (a new lineage gets a random hue)
+var HUE_MUTATION = 8; // a child's hue = parent's +/- up to this many degrees (a new lineage gets a random hue)
 var MATURING_START = 0.8; // fraction of its full size at which a plant starts fruiting
 
 // spreading
@@ -44,12 +44,16 @@ var PERSPECTIVE = 0.40; // 1 = circular/top-down; smaller = flatter, more angled
 var BACKGROUND_COLOR = 'oklch(0.19 0 0)'; // all colors are OKLCH: lightness 0-1, chroma 0-0.4, hue 0-360
 var GROUND_FILL = 'oklch(0.28 0 0)'; // a plant's ground ellipse
 var GROUND_OUTLINE = 'oklch(0.28 0 0)'; // its outline
-var PLANT_LIGHTNESS = 0.65; // the same for all plants - only the hue differs
-var PLANT_CHROMA = 0.15;
+var NEAR_LIGHTNESS = 0.78; // plants born by spreading near their letter's aligned middle: lighter, less vivid (also the planted text)
+var NEAR_CHROMA = 0.16;
+var FAR_LIGHTNESS = 0.35; // plants born far from it: darker
+var FAR_CHROMA = 0.11;
+var COLOR_MID_DIST = 120; // px on the ground (same for all letters); where the colour turns from NEAR to FAR (the middle of an S-curve)
+var COLOR_SOFTNESS = 15; // px; how sharp that turn is: small = almost a step, large = gentle (the turn covers about COLOR_MID_DIST +/- 2x this)
 var TILT_MAX = 8; // degrees; each letter is tilted randomly by up to this, left or right
 var FRUIT_OUTLINE_MAX = 5; // px; thickness of the fruiting outline when a plant is fully grown
-var FRUIT_LIGHTNESS = 0.78; // the fruiting outline is the plant's hue with this lightness and chroma
-var FRUIT_CHROMA = 0.2;
+var FRUIT_LIGHTNESS_SHIFT = 0.1; // the fruiting outline is the plant's own colour, this much lighter (negative = darker)...
+var FRUIT_CHROMA_SHIFT = 0.04; // ...and this much more vivid - so far (dark) plants keep dark fruits and don't hurt readability
 
 // debug (toggled with "D")
 var DEBUG_TEXT_SIZE = 12; // px; the debug panel in the top left corner

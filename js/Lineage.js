@@ -50,7 +50,7 @@ class Lineage {
     // debug color: the hue of its last seen plant (also after extinction), like the plants themselves
     color() {
         if (!this.lastSeen) return DEBUG_COLOR;
-        return 'oklch(' + PLANT_LIGHTNESS + ' ' + PLANT_CHROMA + ' ' + this.lastSeen.hue + ')';
+        return 'oklch(' + NEAR_LIGHTNESS + ' ' + NEAR_CHROMA + ' ' + this.lastSeen.hue + ')';
     }
 
     // convex hull around the living plants' positions (monotone chain); fewer than 3 plants: just their positions
