@@ -1,5 +1,35 @@
 # Process Journal
 
+## 2026-10-26b: Whatever?
+
+Not really sure why I'm doing this, as if not naming it would help. So here it is: *Claude Opus 5.5* in *Visual Studio Code*. Obviously, using other models, or even local ones, would allow me to feel less miserable. Whatever.
+
+## 2026-10-26: In my face
+
+Was implementing a more advanced version of the [aligned middle logic](../plans/20261026_2056_colour-of-new-plants-by-their-distance-from-the-letter-s-mid.md) with my laptop in the kitchen, watching the garden grow. C. (14) sat down next to me and we had some nice conversations about the readability and the right-amount-of-natural-chaos and enjoyed it together until I made a small change with the help of AI and:
+
+- "Oh, you was not the one doing this?"
+- "Don't use AI, it destroys the environment."
+
+Right in my face.
+
+## 2026-10-24b: Writing
+
+Summerazing my thoughts in an understandable way, focusing on describing a feature well, describing it better and better step-by-step through a dialogue... feels like journaling, feels like design documentation?
+
+## 2026-10-24: The Shame!
+
+Yes, (AI) shame (see below) is hitting hard.  
+Not just related to the usual reasons (are there such? energy, data, politics, humanity?), but also to my own insecurities and naivety. Am I using it right / well / correctly? Is my approach laughable?  
+I need to turn this into something productive.
+
+On the one hand... it just feels strangely liberating. Not always, but I've had some interesting experiences that I need to understand better. Closes the gap between my ideas and reality, it would be strange to ignore. It feels nearer / more close to design.  
+This gets seconded by recent discussions with fellow game designers and creative directors, they tell me the same. Liberating stories of prototyping, of messing around, experimentation, an interesting kind of freedom. Obviously, this are people who know the processes well, are capable of controlling them, who know what they want, and are able to listen to what the game wants.
+
+I also (and I don't want to use it as a cheap excuse) need / want to learn it with / for the students. I need to have more informed oppinion about a lot of its layers.
+
+In a strange way I also want to understand this in relation to journaling. How does my way of journaling (that is heavily inspired by [MDM](https://materializing.design/)) change in this context? I believe in the [process](https://bsky.app/profile/king-spooner.bsky.social/post/3mzed4ccmac27), in [gardening](https://medium.com/@csongorb/planting-games-9fc59c3f992f), in listening to *what the game wants*. Currently, I feel this is a contradiction. That AI usage itself goes against the idea of *listening to the material*... but I need to explore this more.
+
 ## 2026-10-23: Readability line
 
 The OLKCH transition was easy and also effective, it has solved some of the issues. The visual chaos is slightly decreased, the letters have a more even tone.  
