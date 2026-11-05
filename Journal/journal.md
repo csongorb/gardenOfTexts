@@ -1,5 +1,9 @@
 # Process Journal
 
+## 2026-11-05: AI-jealousy?
+
+I really like how Mark Brown is fighting with what to think about all this. His game *Word Play* was cloned (?), and he released a [video](https://www.youtube.com/watch?v=8LMau1qXPYE) about it. Creativity in times of LLMs, a fight.
+
 ## 2026-10-26b: Whatever?
 
 Not really sure why I'm doing this, as if not naming it would help. So here it is: *Claude Opus 5.5* in *Visual Studio Code*. Obviously, using other models, or even local ones, would allow me to feel less miserable. Whatever.
